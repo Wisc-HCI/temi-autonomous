@@ -16,10 +16,8 @@ pip install -r requirements.txt
 # create a .env file in the `backend` dir, and add these
 FAMILY_INFO_STR=""
 OPENAI_API_KEY="sk-W9...g13Tm1h"
-ZOOM_SDK_KEY=''
-ZOOM_SDK_SECRET=''
-ZOOM_SESSION_NAME="research-study"
-ZOOM_JWT="..."
+FAMILY_CONFIG_PATH=""
+REDIS_IP
 ```
 
 
