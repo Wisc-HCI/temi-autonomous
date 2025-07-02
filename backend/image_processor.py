@@ -1,3 +1,4 @@
+import datetime
 import redis
 import json
 import time
@@ -24,12 +25,36 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 def process_image(job):
     print(f"Processing: {job}")
     time.sleep(1)  # Replace with real work!
+    # data = {
+    #     "image_path": message['path'],
+    #     "task": "detect_people",
+    #     "request_id": message['request_id'],
+    #     "position": request_context['position'],
+    #     "location": request_context['location']
+    # }
+
+    # context = ...
+
+
+    context = "This is the contex!"
+    formatted_time = datetime.datetime.now().strftime("%Y/%m/%d %I:%M%p")
+
+    # store result on redis
+    res = {
+        "timestamp": int(time.time()),
+        "formatted_time": formatted_time,
+        "context": context,
+    }
+
+    print('Saving result')
+    print(res)
+    if job.get('location'):
+        redis_client.set('location:{location}', json.dumps(res))
 
 
 
 def main():
     redis_client = redis.Redis(host=REDIS_IP, port=6379, db=0, decode_responses=True)
-    redis_client.set('Hi', 'Ho')
     while running:
         _, raw = redis_client.blpop("image_queue")
         job = json.loads(raw)

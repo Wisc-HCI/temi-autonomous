@@ -1,4 +1,5 @@
 import asyncio
+from functools import partial
 from dotenv import load_dotenv
 import redis
 import json
@@ -39,6 +40,8 @@ class TemiScheduler:
     """
     def __init__(self, websocket):
         self.status = None
+        # traveling, idle, capturing
+
         # (on-route:)waypoint name, "user" if following user
         # TODO: need listener for robot movement status (e.g. "arrived at")
         self.location = ""
@@ -48,8 +51,10 @@ class TemiScheduler:
         self.family_config_json = {}
         self.family_config_db = {}
         self.identified_chores = []
+        # TODO: perhaps dynamic movement plan based on time
+        self.movement_plan = self.family_config_json.get("movement_plan", [])
         # self.user_actions = 
-        self.current_waypoint = None
+        self.next_waypoint_index = 0
         self.current_turn_index = None
         self.snapshot_status = None
         self.pending_requests = {}
@@ -83,26 +88,41 @@ class TemiScheduler:
             print(f"Error loading family config from db: {e}")
             self.family_config_db = {}
 
-    async def request_snapshot(self):
+    async def request_snapshot(self, location=None, position=None):
         print('[scheduler] request_snapshot')
         if self.websocket:
             request_id = str(uuid.uuid4())
             future = asyncio.get_event_loop().create_future()
-            self.pending_requests[request_id] = future
+            self.pending_requests[request_id] = {
+                "future": future,
+                "location": location,
+                "position": position
+            }
             await self.websocket.send_json({
                 "type": "take_snapshot",
                 "request_id": request_id
             })
             try:
                 result = await asyncio.wait_for(future, timeout=30)
+                self.status = "idle"
                 return result
             except asyncio.TimeoutError:
                 print(f"[scheduler] Snapshot request {request_id} timed out after 30 seconds.")
                 self.pending_requests.pop(request_id, None)
+                self.status = "idle"
                 return None
         else:
             print('No active websocket connection.')
             return None
+
+    async def goToLocation(self, location):
+        if self.websocket:
+            self.last_goto_command = time.time()
+            self.status = f"traveling:{location}"
+            await self.websocket.send_json({
+                "command": "goTo",
+                "payload": location
+            })
 
     def handle_api_event(self, message):
         print("scheduler: handle_api_event")
@@ -115,15 +135,17 @@ class TemiScheduler:
                 # e.g. YOLO? LLM?
                 # Then just enqueue it to redis with relevant info and move on
                 # Example data
+                request_context = self.pending_requests[request_id]
                 data = {
                     "image_path": message['path'],
                     "task": "detect_people",
-                    "request_id": message['request_id']
+                    "request_id": message['request_id'],
+                    "position": request_context['position'],
+                    "location": request_context['location']
                 }
 
                 redis_client.rpush("image_queue", json.dumps(data))
-
-                self.pending_requests[request_id].set_result(data)
+                self.pending_requests[request_id]['future'].set_result(data)
                 del self.pending_requests[request_id]
                 print('handled data')
         except Exception as e:
@@ -136,13 +158,27 @@ class TemiScheduler:
         request_id = data.get("request_id")
 
         if data["type"] in ["snapshot_result"] and request_id in self.pending_requests:
-            self.pending_requests[request_id].set_result(data)
+            self.pending_requests[request_id]['future'].set_result(data)
             del self.pending_requests[request_id]
             print('handled data')
 
+        elif data["type"] == "arrived_at":
+            # TODO: implement on robot side
+            # location = ...
+            print(f'Arrived at {location} and requesting snapshot')
+            self.arrived_at_location = time.time()
+            self.status = f"capturing:{location}"
+            # Issue capture request
+            await self.request_snapshot(location=location)
+            
     def _take_and_process_snapshot(self):
         pass
 
+    def _get_last_context_timestamp(self):
+        # TODO:
+        # Look up all location keys
+        # find and return the latest timestamp
+        pass
 
     def get_next_action(self):
         """
@@ -154,11 +190,31 @@ class TemiScheduler:
                 - Yes: try and see if anyone is around, move around way points
                 - No: Remember the status of things but go back to resting position
         """
-
+        _next = None
         print('getting next action')
-        movement_plan = self.family_config_json.get("movement_plan", [])
-        return self.request_snapshot
+        if self.status == 'idle':
+            # if we're (possibly) back at homebase and we have recent context. Rest a bit.
+            # TODO: check if Temi has api to check if we're on homebase
+            self.last_context_timestamp = self._get_last_context_timestamp()
+            if self.next_waypoint_index == 0 and time.time() - self.last_context_timestamp < 20 * 60:
+                return None
+            if self.next_waypoint_index >= len(self.movement_plan):
+                # TODO: maybe add some other logics
+                self.next_waypoint_index = 0
+                _next = partial(
+                    self.goToLocation,
+                    "home_base"
+                )
+            else:
+                _next = partial(
+                    self.goToLocation,
+                    self.movement_plan[self.next_waypoint_index]['name']
+                )
+                # TODO: Add retries, maybe
+                self.next_waypoint_index += 1
 
+        # _next = self.request_snapshot
+        return _next
 
     async def main_loop(self):
         now = time.time()
@@ -166,10 +222,11 @@ class TemiScheduler:
             self._refresh_config_from_file()
 
         # TODO: check redis results
-
         _next = self.get_next_action()
-        await _next()
-
+        if _next:
+            await _next()
+        else:
+            print('No action required. Staying put!')
 
     async def start_loop(self):
         while True:
