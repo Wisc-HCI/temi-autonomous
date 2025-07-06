@@ -17,7 +17,7 @@ from typing import Annotated
 
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
 from scheduler import TemiScheduler
-from utils import get_zoom_jwt, log_event
+from utils import log_event
 from models import FamilyMember, ScheduledTask, TaskFlow, TaskItem, Chore
 
 
@@ -38,7 +38,7 @@ app = FastAPI()
 server = WebSocketServer()
 scheduler = TemiScheduler(None)
 server.scheduler = scheduler
-UPLOAD_DIR = "participant_data/media"
+UPLOAD_DIR = os.environ.get('UPLOAD_DIR')
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -80,6 +80,13 @@ async def temi_ws(websocket: WebSocket):
     print(PATH_TEMI)
     await websocket.accept()
     await server.handle_connection(websocket, PATH_TEMI)
+
+
+@app.websocket(PATH_CONTROL)
+async def temi_ws(websocket: WebSocket):
+    print(PATH_CONTROL)
+    await websocket.accept()
+    await server.handle_connection(websocket, PATH_CONTROL)
 
 
 
@@ -165,7 +172,7 @@ async def upload_file(
         "path": save_path,
     }
 
-    scheduler.handle_api_event(msg)
+    await scheduler.handle_api_event(msg)
     return {
         "status": "success",
         "filename": file.filename,

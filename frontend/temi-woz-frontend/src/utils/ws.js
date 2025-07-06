@@ -5,7 +5,7 @@ let reconnectTimeout = null;
 export function connectWebSocket(onMessage, path) {
   const connect = () => {
     console.log("Connecting WebSocket...");
-    socket = new WebSocket(`wss://${window.location.hostname}:8000/${path}`);
+    socket = new WebSocket(`ws://${window.location.hostname}:8000/${path}`);
 
     socket.onopen = () => {
       console.log("WebSocket connected");

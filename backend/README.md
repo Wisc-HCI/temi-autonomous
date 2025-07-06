@@ -17,7 +17,9 @@ pip install -r requirements.txt
 FAMILY_INFO_STR=""
 OPENAI_API_KEY="sk-W9...g13Tm1h"
 FAMILY_CONFIG_PATH=""
-REDIS_IP
+FAMILY_CONFIG_PATH="C:\\git_projects\\temi-autonomous\\backend\\family_config.json"
+UPLOAD_DIR="C:\\git_projects\\temi-autonomous\\backend\\participant_data\\media"
+LOG_DIR="C:\\git_projects\\temi-autonomous\\backend\\participant_data"
 ```
 
 

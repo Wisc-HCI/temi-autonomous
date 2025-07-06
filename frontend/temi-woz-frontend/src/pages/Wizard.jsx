@@ -719,15 +719,6 @@ const WizardPage = () => {
           </div>
         </div>
 
-        <div className="row">
-          <div className="col-12">
-            <MediaList
-              sendMessage={sendMessage}
-              newMediaFile={latestUploadedFile}
-              displayedMedia={displayedMedia}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
