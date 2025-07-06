@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Robot Settings Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              light: '#e6f0ff',
+              DEFAULT: '#165DFF',
+              dark: '#0e42c2'
+            },
+            secondary: {
+              light: '#e0f7f0',
+              DEFAULT: '#36D399',
+              dark: '#1daa7c'
+            },
+            warning: {
+              light: '#fff8e6',
+              DEFAULT: '#FFAB00',
+              dark: '#d18c00'
+            },
+            danger: {
+              light: '#ffedea',
+              DEFAULT: '#FF5630',
+              dark: '#d93e1a'
+            },
+            dark: {
+              light: '#f2f4f7',
+              DEFAULT: '#1D2939',
+              dark: '#101828'
+            },
+            light: {
+              DEFAULT: '#F9FAFB',
+              dark: '#f3f4f6'
+            },
+            purple: {
+              light: '#f5f0ff',
+              DEFAULT: '#8B5CF6',
+              dark: '#7c3aed'
+            }
+          },
+          height: {
+            '30': '15rem'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            card: '0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05)',
+            'card-hover': '0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.06)',
+            modal: '0 20px 40px rgba(0, 0, 0, 0.15)'
+          },
+          borderRadius: {
+            xl: '1rem'
+          }
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .h-30{
+        height: 15rem;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .from-blue-100 {
+      background-image: linear-gradient(to right, #e3f2fd, #ffffff); 
+      }
+      .from-purple-100 {
+      background-image: linear-gradient(to right, #f3e5f5, #ffffff); 
+      }
+      .from-green-100 {
+        background-image: linear-gradient(to right, #e7f8ed, #ffffff); 
+      }
+      .from-yellow-100 {
+        background-image: linear-gradient(to right, #fffbeb, #ffffff);
+      }
+      .from-red-100 {
+        background-image: linear-gradient(to right, #fef0f2, #ffffff); 
+      }
+      .bg-gradient-to-b {
+      background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+     }
+      .from-green-50 {
+      background-image: linear-gradient(to bottom, #f0fdf4, #ffffff); 
+     }
+     .from-yellow-50 {
+      background-image: linear-gradient(to bottom, #fffbeb, #ffffff); 
+     }
+     .from-red-50 {
+      background-image: linear-gradient(to bottom, #fef2f4, #ffffff); 
+     }
+      .card-hover {
+        @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+      }
+      .btn-primary {
+        @apply bg-primary hover:bg-primary-dark text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md;
+      }
+      .btn-secondary {
+        @apply bg-white border border-gray-200 hover:bg-gray-50 text-dark font-medium py-2.5 px-5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md;
+      }
+      .modal-overlay {
+        @apply fixed inset-0 bg-black/50 z-50 flex items-center justify-center;
+      }
+      .modal-content {
+        @apply bg-white rounded-xl shadow-modal w-full max-w-md mx-4 transform transition-all duration-300;
+      }
+      .modal-header {
+        @apply p-5 border-b border-gray-100 flex justify-between items-center;
+      }
+      .modal-body {
+        @apply p-5;
+      }
+      .modal-footer {
+        @apply p-4 border-t border-gray-100 flex justify-end space-x-3;
+      }
+      .fade-out {
+        animation: fadeOut 0.3s ease forwards;
+      }
+      @keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.95); }
+      }
+      .task-item {
+        @apply flex items-center py-2 border-b border-gray-100 last:border-0;
+      }
+      .task-checkbox {
+        @apply h-4 w-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500;
+      }
+      .avatar-container {
+        @apply relative inline-block cursor-pointer;
+      }
+      .avatar-edit-overlay {
+        @apply absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 transition-opacity duration-300;
+      }
+      .avatar-container:hover .avatar-edit-overlay {
+        @apply opacity-100;
+      }
+      .fade-in {
+        animation: fadeIn 0.3s ease forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .line-through {
+        text-decoration: line-through;
+      }
+      .chips-container {
+        @apply flex flex-wrap gap-2 mt-2;
+      }
+      .chip {
+        @apply bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center;
+      }
+      .chip-remove {
+        @apply ml-1 text-gray-500 hover:text-danger cursor-pointer;
+      }
+      .member-tag {
+        @apply bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full;
+      }
+      .day-badge {
+        @apply text-xs px-2 py-1 rounded-full;
+      }
+      .section-title {
+        @apply text-2xl font-bold mb-5 pb-3 border-b border-gray-100;
+      }
+      .card-title {
+        @apply text-lg font-semibold;
+      }
+      .card-content {
+        @apply p-6;
+      }
+      .card-header {
+        @apply flex items-center justify-between mb-4;
+      }
+      .card-icon {
+        @apply w-10 h-10 rounded-full flex items-center justify-center text-xl;
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-light text-dark min-h-screen">
+  <!-- Navigation Bar -->
+  <nav class="bg-white shadow-md fixed w-full top-0 z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa fa-robot text-primary text-2xl"></i>
+        <h1 class="text-xl font-bold text-dark">Home Robot</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <button class="btn-secondary hidden md:flex items-center">
+          <i class="fa fa-question-circle mr-2"></i>Help
+        </button>
+        <div class="avatar-container" id="userSettingsBtn">
+          <img id="userAvatarImg" src="baby.jpg" alt="User Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-primary">
+          <div class="avatar-edit-overlay">
+            <i class="fa fa-cog text-white"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 pt-24 pb-16">
+    <!-- Welcome Message -->
+    <section class="mb-10">
+      <h2 class="text-3xl font-bold mb-3 text-dark">Welcome back, <span id="familyName" class="text-primary">Peppa</span> Family</h2>
+      <p class="text-gray-600 max-w-3xl">Set up and manage your home robot, customize experiences for each family member</p>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+      <div class="bg-white rounded-xl shadow-card p-6 card-hover border border-gray-100">
+        <div class="card-header">
+          <h3 class="card-title">Family Members</h3>
+          <div class="card-icon bg-primary-light text-primary">
+            <i class="fa fa-users"></i>
+          </div>
+        </div>
+        <p class="text-gray-600 mb-5">Manage every family member and set personal preferences</p>
+        <button class="btn-primary w-full flex items-center justify-center" id="openMemberModal">
+          <i class="fa fa-plus mr-2"></i>Add Member
+        </button>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-card p-6 card-hover border border-gray-100">
+        <div class="card-header">
+          <h3 class="card-title">Daily Schedule</h3>
+          <div class="card-icon bg-warning-light text-warning">
+            <i class="fa fa-clock-o"></i>
+          </div>
+        </div>
+        <p class="text-gray-600 mb-5">Set daily activities and reminders for family members</p>
+        <button class="btn-primary w-full flex items-center justify-center" id="openScheduleModal">
+          <i class="fa fa-calendar-plus-o mr-2"></i>Add Schedule
+        </button>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-card p-6 card-hover border border-gray-100">
+        <div class="card-header">
+          <h3 class="card-title">Task Flow</h3>
+          <div class="card-icon bg-secondary-light text-secondary">
+            <i class="fa fa-list-ol"></i>
+          </div>
+        </div>
+        <p class="text-gray-600 mb-5">Create and edit the custom task sequences for the robot</p>
+        <button class="btn-primary w-full flex items-center justify-center" id="openTaskModal">
+          <i class="fa fa-plus-circle mr-2"></i>New Task
+        </button>
+      </div>
+    
+      <div class="bg-white rounded-xl shadow-card p-6 card-hover border border-gray-100">
+        <div class="card-header">
+          <h3 class="card-title">Chores</h3>
+          <div class="card-icon bg-purple-light text-purple">
+            <i class="fa fa-home"></i>
+          </div>
+        </div>
+        <p class="text-gray-600 mb-5">Manage household chores and assign to family members</p>
+        <button class="btn-primary w-full flex items-center justify-center" id="openChoreModalQuick">
+          <i class="fa fa-plus mr-2"></i>Add Chore
+        </button>
+      </div>
+    </section>
+
+    <!-- Family Members List -->
+    <section class="mb-10">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="section-title">Family Members</h2>
+        <button class="btn-secondary flex items-center" id="editMembersBtn">
+          <i class="fa fa-edit mr-2"></i>Edit
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="memberGrid">
+        <!-- Member Card 1 -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-member-id="1">
+          <div class="relative bg-gray-50 flex items-center justify-center h-30 overflow-hidden">
+            <img src="father.jpg" alt="Father" class="w-full h-30 object-cover">
+            <div class="absolute top-3 right-3 bg-primary text-white text-xs font-medium px-2.5 py-1 rounded-full shadow">
+              Admin
+            </div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-lg mb-1.5">Daddy Pig</h3>
+            <p class="text-gray-600 text-sm mb-3.5">35 · Engineer</p>
+            <div class="flex justify-between">
+              <button class="text-primary text-sm edit-member flex items-center" data-member-id="1">
+                <i class="fa fa-edit mr-1.5"></i>Edit
+              </button>
+              <button class="text-gray-500 hover:text-danger delete-member" data-member-id="1">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Member Card 2 -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-member-id="2">
+          <div class="relative bg-gray-50 flex items-center justify-center h-30 overflow-hidden">
+            <img src="mom.jpg" alt="Mother" class="w-full h-30 object-cover">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-lg mb-1.5">Mommy Pig</h3>
+            <p class="text-gray-600 text-sm mb-3.5">32 · Teacher</p>
+            <div class="flex justify-between">
+              <button class="text-primary text-sm edit-member flex items-center" data-member-id="2">
+                <i class="fa fa-edit mr-1.5"></i>Edit
+              </button>
+              <button class="text-gray-500 hover:text-danger delete-member" data-member-id="2">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Member Card 3 -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-member-id="3">
+          <div class="relative bg-gray-50 flex items-center justify-center h-30 overflow-hidden">
+            <img src="child.jpg" alt="Child" class="w-full h-30 object-cover">
+          </div>
+          <div class="p-5">
+            <h3 class="font-bold text-lg mb-1.5">Peppa Pig</h3>
+            <p class="text-gray-600 text-sm mb-3.5">6 · Student</p>
+            <div class="flex justify-between">
+              <button class="text-primary text-sm edit-member flex items-center" data-member-id="3">
+                <i class="fa fa-edit mr-1.5"></i>Edit
+              </button>
+              <button class="text-gray-500 hover:text-danger delete-member" data-member-id="3">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Add Member Card -->
+        <div class="border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center h-100 cursor-pointer hover:border-primary transition-colors duration-300 bg-gray-50" id="addMemberCard">
+          <i class="fa fa-plus-circle text-4xl text-gray-400 mb-3"></i>
+          <p class="text-gray-500 font-medium">Add New Member</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Daily Schedule -->
+    <section class="mb-10">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="section-title">Daily Schedule</h2>
+        <div class="flex space-x-3">
+          <button class="btn-secondary flex items-center text-sm" id="scheduleFilterBtn">
+            <i class="fa fa-filter mr-1.5"></i>Filter
+          </button>
+          <button class="btn-primary flex items-center text-sm" id="openScheduleModal2">
+            <i class="fa fa-plus mr-1.5"></i>New
+          </button>
+        </div>
+      </div>
+      
+      <!-- Timeline -->
+      <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100">
+        <div class="flex items-center mb-5">
+          <h3 class="font-semibold mr-4 text-lg">Today's Schedule</h3>
+          <span id="currentDateTime" class="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+            <!-- Date will be populated dynamically -->
+          </span>
+        </div>
+        
+        <!-- Timeline Component -->
+        <div class="relative pl-6 border-l-2 border-gray-200 space-y-6" id="timelineContainer">
+          <!-- Repeat Schedule -->
+          <div class="relative left-[-11px]" data-schedule-id="1">
+            <div class="schedule-dot w-5 h-5 rounded-full bg-primary border-2 border-white absolute top-0 shadow-md"></div>
+            <div class="ml-6">
+              <div class="flex items-center justify-between">
+                <span class="schedule-time text-sm font-medium text-gray-500">07:00 - 07:30</span>
+                <div class="flex items-center">
+                  <span class="schedule-type text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full mr-2">
+                    Task Flow
+                  </span>
+                  <span class="text-xs text-gray-500">Peppa Pig</span>
+                </div>
+              </div>
+              <div class="mt-2 bg-gray-50 p-4 rounded-xl">
+                <div class="flex items-start">
+                  <div class="schedule-icon w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fa fa-tasks text-primary"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="schedule-title font-medium text-gray-800">Prepare Breakfast</h4>
+                    <p class="schedule-description text-sm text-gray-500 mt-1.5">Prepare breakfast for the whole family</p>
+                  </div>
+                  <div class="schedule-actions flex space-x-2 ml-2 flex-shrink-0">
+                    <button class="text-gray-400 hover:text-primary edit-schedule" data-schedule-id="1">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-danger delete-schedule" data-schedule-id="1">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reminder Schedule -->
+          <div class="relative left-[-11px]" data-schedule-id="2">
+            <div class="schedule-dot w-5 h-5 rounded-full bg-warning border-2 border-white absolute top-0 shadow-md"></div>
+            <div class="ml-6">
+              <div class="flex items-center justify-between">
+                <span class="schedule-time text-sm font-medium text-gray-500">08:30 - 08:45</span>
+                <div class="flex items-center">
+                  <span class="schedule-type text-xs bg-warning/10 text-warning px-2.5 py-1 rounded-full mr-2">
+                    Standalone Activity
+                  </span>
+                  <span class="text-xs text-gray-500">Mommy Pig</span>
+                </div>
+              </div>
+              <div class="mt-2 bg-gray-50 p-4 rounded-xl">
+                <div class="flex items-start">
+                  <div class="schedule-icon w-9 h-9 rounded-full bg-warning/10 flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fa fa-bell text-warning"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="schedule-title font-medium text-gray-800">Take Medicine</h4>
+                    <p class="schedule-description text-sm text-gray-500 mt-1.5">Remind Mommy Pig to take cold medication</p>
+                  </div>
+                  <div class="schedule-actions flex space-x-2 ml-2 flex-shrink-0">
+                    <button class="text-gray-400 hover:text-primary edit-schedule" data-schedule-id="2">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-danger delete-schedule" data-schedule-id="2">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Task Flow -->
+    <section class="mb-10">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="section-title">Task Flow</h2>
+        <button class="btn-primary flex items-center" id="openTaskModal2">
+          <i class="fa fa-plus mr-2"></i>New Task
+        </button>
+      </div>
+      
+      <!-- Task List -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="taskFlowContainer">
+        
+      </div>
+    </section>
+    
+    <!-- Chores -->
+    <section class="mb-10">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="section-title">Chores</h2>
+        <button class="btn-primary flex items-center" id="openChoreModal">
+          <i class="fa fa-plus mr-2"></i>New Chore
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="choresContainer">
+        <!-- Card 1: Vacuuming -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-chore-id="1">
+          <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Vacuuming</h3>
+              <div class="flex space-x-2">
+                <button class="text-gray-400 hover:text-primary edit-chore" data-chore-id="1">
+                  <i class="fa fa-pencil"></i>
+                </button>
+                <button class="text-gray-400 hover:text-danger delete-chore" data-chore-id="1">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center mt-2">
+              <div class="flex items-center text-sm text-gray-600 mr-4">
+                <i class="fa fa-home mr-1.5"></i>
+                <span>Living Room</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                <i class="fa fa-bolt mr-1.5 text-warning"></i>
+                <span>Medium Effort</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-5">
+            <p class="text-gray-600">Vacuum the entire living room area</p>
+          </div>
+        </div>
+      
+        <!-- Card 2: Dish Washing -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-chore-id="2">
+          <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Dish Washing</h3>
+              <div class="flex space-x-2">
+                <button class="text-gray-400 hover:text-primary edit-chore" data-chore-id="2">
+                  <i class="fa fa-pencil"></i>
+                </button>
+                <button class="text-gray-400 hover:text-danger delete-chore" data-chore-id="2">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center mt-2">
+              <div class="flex items-center text-sm text-gray-600 mr-4">
+                <i class="fa fa-home mr-1.5"></i>
+                <span>Kitchen</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                <i class="fa fa-bolt mr-1.5 text-secondary"></i>
+                <span>Low Effort</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-5">
+            <p class="text-gray-600">Wash all dishes in the sink</p>
+          </div>
+        </div>
+      
+        <!-- Card 3: Dusting -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-chore-id="3">
+          <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Dusting</h3>
+              <div class="flex space-x-2">
+                <button class="text-gray-400 hover:text-primary edit-chore" data-chore-id="3">
+                  <i class="fa fa-pencil"></i>
+                </button>
+                <button class="text-gray-400 hover:text-danger delete-chore" data-chore-id="3">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center mt-2">
+              <div class="flex items-center text-sm text-gray-600 mr-4">
+                <i class="fa fa-home mr-1.5"></i>
+                <span>Bedroom</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                <i class="fa fa-bolt mr-1.5 text-secondary"></i>
+                <span>Low Effort</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-5">
+            <p class="text-gray-600">Dust bedroom furniture, shelves, and nightstands</p>
+          </div>
+        </div>
+      
+        <!-- Card 4: Laundry -->
+        <div class="bg-white rounded-xl shadow-card overflow-hidden card-hover border border-gray-100" data-chore-id="4">
+          <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Laundry</h3>
+              <div class="flex space-x-2">
+                <button class="text-gray-400 hover:text-primary edit-chore" data-chore-id="4">
+                  <i class="fa fa-pencil"></i>
+                </button>
+                <button class="text-gray-400 hover:text-danger delete-chore" data-chore-id="4">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center mt-2">
+              <div class="flex items-center text-sm text-gray-600 mr-4">
+                <i class="fa fa-home mr-1.5"></i>
+                <span>Bathroom</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                <i class="fa fa-bolt mr-1.5 text-danger"></i>
+                <span>High Effort</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-5">
+            <p class="text-gray-600">Wash, dry, and fold the dirty clothes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-gray-200 py-8 w-full">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center space-x-3 mb-4 md:mb-0">
+          <i class="fa fa-robot text-primary text-2xl"></i>
+          <span class="font-medium text-lg">Home Robot</span>
+        </div>
+        <div class="flex space-x-5">
+          <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xl">
+            <i class="fa fa-facebook"></i>
+          </a>
+          <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xl">
+            <i class="fa fa-twitter"></i>
+          </a>
+          <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xl">
+            <i class="fa fa-instagram"></i>
+          </a>
+        </div>
+      </div>
+      <div class="mt-6 text-center text-gray-500 text-sm">
+        &copy; 2025 Home Robot. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODALS SECTION -->
+  
+  <!-- User Settings Modal -->
+  <div id="userSettingsModal" class="modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="modal-content transform scale-95 transition-transform duration-300">
+      <div class="modal-header">
+        <h3 class="font-bold text-lg">User Settings</h3>
+        <button id="closeUserSettingsModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body space-y-4">
+        <div>
+          <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">Family Name</label>
+          <input type="text" id="userName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="Enter family name" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Profile Photo</label>
+          <div class="flex flex-col items-center">
+            <img id="userAvatarPreview" src="baby.jpg" alt="Avatar Preview" class="w-20 h-20 rounded-full object-cover border mb-3">
+            <label class="btn-secondary cursor-pointer inline-block">
+              <i class="fa fa-upload mr-2"></i> Upload Photo
+              <input type="file" id="userAvatarInput" class="hidden" accept="image/*">
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelUserSettings" class="btn-secondary">Cancel</button>
+        <button class="btn-primary" id="saveUserSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Member Modal -->
+  <div id="memberModal" class="modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="modal-content transform scale-95 transition-transform duration-300">
+      <div class="modal-header">
+        <h3 class="font-bold text-lg" id="modalTitle">Add Family Member</h3>
+        <button id="closeMemberModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <form id="memberForm" class="modal-body space-y-4">
+        <input type="hidden" id="editMemberId" name="editMemberId" value="">
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+          <input type="text" id="name" name="name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+        </div>
+        <div>
+          <label for="age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+          <input type="number" id="age" name="age" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" min="0" max="120" required>
+        </div>
+        <div>
+          <label for="occupation" class="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
+          <input type="text" id="occupation" name="occupation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+        </div>
+        <div>
+          <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">Profile Photo</label>
+          <div class="flex items-center justify-center w-full">
+            <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+              <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <i class="fa fa-cloud-upload text-2xl text-gray-400 mb-2"></i>
+                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                <p class="text-xs text-gray-500">PNG, JPG (up to 2MB)</p>
+              </div>
+              <input id="dropzone-file" type="file" class="hidden" accept="image/*">
+            </label>
+          </div>
+          
+          <!-- Current Photo Preview -->
+          <div id="currentPhotoPreview" class="hidden mt-3 text-center">
+            <p class="text-sm text-gray-600 mb-2">Current Photo:</p>
+            <img id="currentPhoto" src="" alt="Current Photo" class="w-20 h-20 mx-auto rounded-full object-cover border">
+          </div>
+          
+          <!-- New Photo Preview -->
+          <div id="newPhotoPreviewContainer" class="hidden mt-3 text-center">
+            <p class="text-sm text-gray-600 mb-2">New Photo Preview:</p>
+            <img id="newPhotoPreview" src="" alt="New Photo Preview" class="w-20 h-20 mx-auto rounded-full object-cover border">
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button id="cancelMember" class="btn-secondary">Cancel</button>
+        <button type="submit" form="memberForm" class="btn-primary" id="saveMemberBtn">Save Member</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Schedule Modal -->
+<div id="scheduleModal" class="modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="modal-content transform scale-95 transition-transform duration-300">
+    <div class="modal-header">
+      <h3 class="font-bold text-lg" id="scheduleModalTitle">Add New Schedule</h3>
+      <button id="closeScheduleModal" class="text-gray-400 hover:text-gray-600">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <form id="scheduleForm" class="modal-body space-y-4">
+      <input type="hidden" id="editScheduleId" value="">
+      <div>
+        <label for="scheduleName" class="block text-sm font-medium text-gray-700 mb-1">Schedule Name</label>
+        <input type="text" id="scheduleName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="scheduleStartTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+          <input type="time" id="scheduleStartTime" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+        </div>
+        <div>
+          <label for="scheduleEndTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+          <input type="time" id="scheduleEndTime" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+        </div>
+      </div>
+      <div class="flex items-center">
+        <input type="checkbox" id="allDay" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary">
+        <label for="allDay" class="ml-2 text-sm text-gray-700">All-day</label>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Family Members</label>
+        <div id="familyMembersContainer" class="flex flex-wrap gap-2">
+          <!-- Family members will be populated here -->
+        </div>
+      </div>
+      <div>
+        <label for="scheduleType" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+        <select id="scheduleType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" onchange="updateScheduleType(this)">
+          <option value="standalone">Standalone Activity</option>
+          <option value="taskflow">Task Flow</option>
+          <option value="chores">Chores</option>
+        </select>
+      </div>
+    
+      <div id="relatedItemsContainer" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Related Item</label>
+        <div id="relatedItemsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        </div>
+        <input type="hidden" id="relatedItemId" name="relatedItemId" value="">
+      </div>
+      <div>
+        <label for="scheduleDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea id="scheduleDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" rows="3" required></textarea>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button id="cancelSchedule" class="btn-secondary">Cancel</button>
+      <button class="btn-primary" id="saveScheduleBtn">Save Schedule</button>
+    </div>
+  </div>
+</div>
+  
+  <!-- Add Task Modal -->
+  <div id="taskModal" class="modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="modal-content transform scale-95 transition-transform duration-300">
+      <div class="modal-header">
+        <h3 class="font-bold text-lg" id="taskModalTitle">Create New Task Flow</h3>
+        <button id="closeTaskModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <form id="taskForm" class="modal-body space-y-4">
+        <input type="hidden" id="editTaskId" value="">
+        <div>
+          <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">Task Flow Name</label>
+          <input type="text" id="taskName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+        </div>
+        <div>
+          <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea id="taskDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" rows="2" required></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Family Members</label>
+          <div id="taskFamilyMembersContainer" class="flex flex-wrap gap-2">
+            <!-- Family members will be populated here -->
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Day Type</label>
+          <div class="flex space-x-4">
+            <div class="flex items-center">
+              <input type="radio" id="weekday" name="dayType" value="weekday" class="h-4 w-4 text-primary focus:ring-primary" checked>
+              <label for="weekday" class="ml-2 text-sm text-gray-700">Weekday</label>
+            </div>
+            <div class="flex items-center">
+              <input type="radio" id="weekend" name="dayType" value="weekend" class="h-4 w-4 text-primary focus:ring-primary">
+              <label for="weekend" class="ml-2 text-sm text-gray-700">Weekend</label>
+            </div>
+          </div>
+        </div>
+        <div class="border-t border-gray-200 pt-4">
+          <div class="flex justify-between items-center mb-3">
+            <h4 class="font-medium text-gray-700">Task Steps</h4>
+            <button type="button" id="addTaskStep" class="text-sm btn-primary px-3 py-1">
+              <i class="fa fa-plus mr-1"></i>Add Step
+            </button>
+          </div>
+          <div id="taskStepsContainer" class="space-y-3 max-h-60 overflow-y-auto p-2">
+            <div class="task-step flex items-center space-x-2">
+              <input type="text" placeholder="Enter task step" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+              <button type="button" class="text-danger hover:text-danger/80 delete-task-step">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button id="cancelTask" class="btn-secondary">Cancel</button>
+        <button class="btn-primary" id="saveTaskBtn">Save Task Flow</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Chore Modal -->
+<div id="choreModal" class="modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="modal-content transform scale-95 transition-transform duration-300">
+    <div class="modal-header">
+      <h3 class="font-bold text-lg" id="choreModalTitle">Create New Chore</h3>
+      <button id="closeChoreModal" class="text-gray-400 hover:text-gray-600">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <form id="choreForm" class="modal-body space-y-4">
+      <input type="hidden" id="editChoreId" value="">
+      <div>
+        <label for="choreName" class="block text-sm font-medium text-gray-700 mb-1">Chore Name</label>
+        <input type="text" id="choreName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+      </div>
+      <div>
+        <label for="choreDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea id="choreDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" rows="2" required></textarea>
+      </div>
+      <div>
+        <label for="choreRoom" class="block text-sm font-medium text-gray-700 mb-1">Room</label>
+        <select id="choreRoom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+          <option value="Living Room">Living Room</option>
+          <option value="Bedroom">Bedroom</option>
+          <option value="Dining Room">Dining Room</option>
+          <option value="Kitchen">Kitchen</option>
+          <option value="Rest Room">Rest Room</option>
+        </select>
+      </div>
+      <div>
+        <label for="choreEffort" class="block text-sm font-medium text-gray-700 mb-1">Effort Level</label>
+        <select id="choreEffort" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" required>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button id="cancelChore" class="btn-secondary">Cancel</button>
+      <button class="btn-primary" id="saveChoreBtn">Save Chore</button>
+    </div>
+  </div>
+</div>
+
+  <!-- JavaScript Files -->
+  <script src="modal.js"></script>
+  <script src="notification.js"></script>
+  <script src="userSetting.js"></script>
+  <script src="memberHandler.js"></script>
+  <script src="scheduleHandler.js"></script>
+  <script src="taskHandler.js"></script>
+  <script src="familyHelper.js"></script>
+  <script src="choreHandler.js"></script>
+  
+  <!-- Initialization Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize modules
+      initModalSystem();
+      initUserSettings();
+      initMemberHandler();
+      initScheduleHandler();
+      initTaskHandler();
+      initFamilyHelper();
+      initChoreHandler();
+
+      // Update current date time
+      function updateDateTime() {
+        const now = moment().tz("America/Chicago");
+        document.getElementById('currentDateTime').textContent = now.format('MMMM D, dddd h:mm A');
+      }
+      
+      updateDateTime();
+      setInterval(updateDateTime, 60000);
+    });
+  </script>
+</body>
+</html>
