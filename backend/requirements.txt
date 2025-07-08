@@ -4,3 +4,7 @@ openai==1.69.0
 fastapi[standard]
 sqlmodel
 redis[hiredis]
+
+# yolo
+ultralytics
+openvino

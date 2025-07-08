@@ -9,7 +9,7 @@ import base64
 import mimetypes
 import signal
 from dotenv import load_dotenv
-
+from ultralytics import YOLO
 
 load_dotenv()
 
@@ -31,6 +31,38 @@ with open(family_config_file, 'r') as f:
     family_config_json = json.load(f)
 
 location_reminder = family_config_json.get("location_reminder", [])
+
+
+
+
+# YOLO stuff
+# YOLO_MODEL = 'yolo11n.pt'
+# yolo_model = YOLO(YOLO_MODEL, task='detect')
+YOLO_MODEL = 'yolo11n_openvino_model'
+yolo_model = YOLO(YOLO_MODEL, task='detect')
+obj_dict = {
+    0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus',
+    6: 'train', 7: 'truck', 8: 'boat', 9: 'traffic light', 10: 'fire hydrant', 
+    11: 'stop sign', 12: 'parking meter', 13: 'bench', 14: 'bird', 15: 'cat',
+    16: 'dog', 17: 'horse', 18: 'sheep', 19: 'cow', 20: 'elephant', 21: 'bear',
+    22: 'zebra', 23: 'giraffe', 24: 'backpack', 25: 'umbrella', 26: 'handbag',
+    27: 'tie', 28: 'suitcase', 29: 'frisbee', 30: 'skis', 31: 'snowboard',
+    32: 'sports ball', 33: 'kite', 34: 'baseball bat', 35: 'baseball glove',
+    36: 'skateboard', 37: 'surfboard', 38: 'tennis racket', 39: 'bottle',
+    40: 'wine glass', 41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon', 45: 'bowl',
+    46: 'banana', 47: 'apple', 48: 'sandwich', 49: 'orange', 50: 'broccoli',
+    51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut', 55: 'cake', 56: 'chair',
+    57: 'couch', 58: 'potted plant', 59: 'bed', 60: 'dining table', 61: 'toilet',
+    62: 'tv', 63: 'laptop', 64: 'mouse', 65: 'remote', 66: 'keyboard', 67: 'cell phone',
+    68: 'microwave', 69: 'oven', 70: 'toaster', 71: 'sink', 72: 'refrigerator',
+    73: 'book', 74: 'clock', 75: 'vase', 76: 'scissors', 77: 'teddy bear',
+    78: 'hair drier', 79: 'toothbrush'
+}
+
+
+
+
+
 
 
 
@@ -140,6 +172,20 @@ def check_image_for_reminders(filename, location, reminder_context):
     res = parse_json_response(res)
     print(f'[check_image_for_reminders] Analysis result: \n{res}')
     return res
+
+
+
+
+def check_image_for_persons(filename, location, position):
+    # filepath = "C:\\Users\\xurub\\git_repos\\temi-woz\\backend\\participant_data\\archive\\JPEG_20250620_142613_6751575767030221795.jpg"
+    # res = yolo_model.predict(filepath, save=True, conf=0.5)
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    # Can set save=True for debug --> output image with bounding boxes
+    res = yolo_model.predict(filepath, save=False, conf=0.6)
+    frame_labels = set([int(x) for x in res[0].boxes.cls.tolist()])
+    # 0 is index for persons
+    return 0 in frame_labels
+
 
 
 
