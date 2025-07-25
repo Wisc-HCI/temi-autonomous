@@ -611,22 +611,22 @@ const WizardPage = () => {
             </div>
 
             <div className="row mt-2">
-{/*              <div className="col-sm-4">
+              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    disabled={!canTakePicture}
+                    // disabled={!canTakePicture}
                     onClick={() => {
                       sendMessage({
                         command: "takePicture",
                         payload: ""
                       })
-                      setCanTakePicture(false)
-                      setCanStartVideo(false)
+                      // setCanTakePicture(false)
+                      // setCanStartVideo(false)
                     }}>
                   Take Picture
                 </button>
-              </div>*/}
-              <div className="col-sm-4">
+              </div>
+              {/*<div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     disabled={!canStartVideo}
@@ -661,7 +661,7 @@ const WizardPage = () => {
                     }}>
                   Stop Video
                 </button>
-              </div>
+              </div>*/}
             </div>
 
 
