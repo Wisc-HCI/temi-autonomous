@@ -6,6 +6,7 @@ from openai import OpenAI
 from openai import AsyncOpenAI
 import json
 import redis
+import time
 from redis import asyncio as aioredis
 import random
 from utils import save_message, check_weather, get_locations_info

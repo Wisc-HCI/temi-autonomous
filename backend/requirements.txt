@@ -4,6 +4,7 @@ openai==1.69.0
 fastapi[standard]
 sqlmodel
 redis[hiredis]
+requests
 
 # yolo
 ultralytics
