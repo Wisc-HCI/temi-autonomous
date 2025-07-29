@@ -1,0 +1,59 @@
+{
+    "2025/07/29": {
+        "time-limits": {
+            "inactive": false,
+            "start": "16:30pm",
+            "end": "21pm",
+            "vision_trigger": "The boy is playing ipad",
+            "who": ["Peixuan"],
+            "where": ["bed", "kitchen"],
+            "duration_trigger": 600,
+            "overall_max_count": "5",
+            "max_count_by_person": {
+                "Peixuan": 5
+            },
+            "trigger_check_freq": 120,
+        },
+        "task 1": {
+            "start": "",
+            "end": "",
+            "vision_trigger": "",
+            "who": [],
+            "where": [],
+            "duration_trigger": null,
+            "overall_max_count": "",
+            "max_count_by_person": {
+
+            },
+            "status_by_person": {
+
+            },
+            "trigger_check_freq": ""
+        }
+    },
+    "family_members": {
+        "member1": "",
+        "member2": "",
+        "member3": ""
+    },
+    "movement_plan": [
+        {
+            "name": "mx desk",
+            "start_time": "",
+            "end_time": ""
+        },
+        {
+            "name": "cat litter",
+            "start_time": "",
+            "end_time": ""
+        },
+        {
+            "name": "stair"
+        }
+    ],
+    "location_reminder": {
+        "mx desk": "If the computer is on and no one is sitting there, the computer should be turned off.",
+        "cat litter": "If the cat litter box looks used, it should be cleaned.",
+        "stair": "If the lights are still on, they should be turned off."
+    }
+}
