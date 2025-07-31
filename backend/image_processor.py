@@ -30,7 +30,7 @@ OPENAI_GPT_MODEL_LG="gpt-4.1-2025-04-14"
 with open(family_config_file, 'r') as f:
     family_config_json = json.load(f)
 
-location_reminder = family_config_json.get("location_reminder", [])
+# location_reminder = family_config_json.get("location_reminder", [])
 
 
 
@@ -90,23 +90,24 @@ def get_base64_data_uri(filepath):
 
 
 REMINDER_ANALYSIS_PROMPT = '''
-Analyze the image and describe what chores or tasks or reminders may be appropriate, given the context provided for where the image was taken.
+Analyze the image and describe if the following conditions are present in the image.
 
-Image location: {LOCATION}
+Conditions to check for:
+{REMINDER_CONTEXT}
 
-Context for the reminder and location: {REMINDER_CONTEXT}
+Format:
+condition name: condition description.
 
-Only give reminders that are relevant to what’s visible in the image and provided in the context.
+
+For each condition, return a true or false value, depending on if the condition is detected.
 
 You should provide a response in JSON format, like in this example
 
 {{
-    "has_reminder": true / false,
-    "task_or_action": "The dishes need to be washed."
+    "<condition-name>": true / false,
+    "<condition-name>": true / false,
+    "<condition-name>": true / false
 }}
-
-If there is nothing relevant to remind, return "fasle" for "has_reminder", and disregard the field "task_or_action".
-Otherwise, "task_or_action" should describe what the family should do.
 
 
 # solution in json:
@@ -133,9 +134,8 @@ def parse_json_response(json_res):
 
 
 
-def check_image_for_reminders(filename, location, reminder_context):
+def check_image_for_reminders(filename, reminder_context):
     prompt = REMINDER_ANALYSIS_PROMPT.format(
-        LOCATION=location,
         REMINDER_CONTEXT=reminder_context
     )
     filepath = os.path.join(UPLOAD_DIR, filename)
@@ -176,7 +176,7 @@ def check_image_for_reminders(filename, location, reminder_context):
 
 
 
-def check_image_for_persons(filename, location, position):
+def check_image_for_persons(filename):
     # filepath = "C:\\Users\\xurub\\git_repos\\temi-woz\\backend\\participant_data\\archive\\JPEG_20250620_142613_6751575767030221795.jpg"
     # res = yolo_model.predict(filepath, save=True, conf=0.5)
     filepath = os.path.join(UPLOAD_DIR, filename)
@@ -191,42 +191,99 @@ def check_image_for_persons(filename, location, position):
 
 
 def process_image(job):
+    redis_client.set('status', 'processing')
+    redis_client.set('status_updated', int(time.time()))
     print(f"Processing: {job}")
     # data = {
     #     "filename": message['filename'],
-    #     "task": "detect_people",
+    #     "task_names": "detect_people",
     #     "request_id": message['request_id'],
     #     "position": request_context['position'],
     #     "location": request_context['location']
     # }
 
-    if job['task'] == "check_if_reminder":
-        location = job['location']
-        reminder_context = location_reminder.get(location)
+    now = datetime.datetime.now()
+    current_date = now.strftime('%Y/%m/%d')
+    task_names = job['task_names']
+    all_tasks = family_config_json.get(current_date, {})
+    location = job['location']
+
+    # check if any people in the picture
+    has_person = check_image_for_persons(
+        job['filename'],
+    )
+
+    for task in task_names:
+        redis_client.set(f"last_checked:{task}:{location}", str(int(time.time())))
+
+    if has_person:
+        reminder_context = ''
+        for task in task_names:
+            vision_trigger = all_tasks.get(task, {}).get('vision_trigger')
+            if vision_trigger:
+                reminder_context += task + ': ' + vision_trigger + ';\n'
         if reminder_context:
             res = check_image_for_reminders(
                 job['filename'],
-                location,
                 reminder_context
             )
             if res is None:
                 return
-            if res.get('has_reminder', False) is False:
-                context = 'None'
-            else:
-                context = res.get('task_or_action', 'None')
-
-            formatted_time = datetime.datetime.now().strftime("%Y/%m/%d %I:%M%p")
-            # store result on redis
-            res = {
-                "timestamp": int(time.time()),
-                "formatted_time": formatted_time,
-                "context": context,
-            }
-
-            print('Saving result')
+            
             print(res)
-            redis_client.set(f"location:{location}", json.dumps(res))
+
+            # TODO: store task-specific results, and depending on class of reminder
+            # may need to save "first_true" / "last_true" etc.
+            now = int(time.time())
+            now_str = str(now)
+            for task in task_names:
+                trigger_bool = res.get(task, None)
+                duration_trigger = all_tasks.get(task, {}).get('duration_trigger')
+                if trigger_bool:
+                    if duration_trigger:
+                        # These are for triggers that depend on certain durations of activities
+                        redis_client.set(f"{task}:true:location", location)
+                        ZSET_KEY = f"{task}:true"
+                        redis_client.zadd(ZSET_KEY, {now_str: now})
+                        cutoff = now - 15 * 60
+                        redis_client.zremrangebyscore(ZSET_KEY, 0, cutoff)
+                        earliest_entry = redis_client.zrange(ZSET_KEY, 0, 0, withscores=True)
+                        earliest_timestamp = int(earliest_entry[0][1])
+                        if now - earliest_timestamp > duration_trigger:
+                            print(f'Adding {task} to robot action queue')
+                            redis_client.rpush('robot_action', task)
+                    else:
+                        print(f'Adding {task} to robot action queue')
+                        redis_client.rpush('robot_action', task)
+                else:
+                    if duration_trigger:
+                        prev_location = redis_client.get(f"{task}:true:location")
+                        if prev_location == location:
+                            redis_client.delete(f"{task}:true:location")
+
+    else:
+        for task in task_names:
+            duration_trigger = all_tasks.get(task, {}).get('duration_trigger')
+            if duration_trigger:
+                prev_location = redis_client.get(f"{task}:true:location")
+                if prev_location == location:
+                    redis_client.delete(f"{task}:true:location")
+                
+            
+            # formatted_time = datetime.datetime.now().strftime("%Y/%m/%d %I:%M%p")
+            # # store result on redis
+            # res = {
+            #     "timestamp": int(time.time()),
+            #     "formatted_time": formatted_time,
+            #     "context": context,
+            # }
+
+            # print('Saving result')
+            # print(res)
+            # redis_client.set(f"location:{location}", json.dumps(res))
+        
+    redis_client.set('status', 'idle')
+    redis_client.set('status_updated', int(time.time()))
 
     # TODO: Log these results
 

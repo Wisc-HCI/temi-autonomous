@@ -71,7 +71,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 @app.on_event("startup")
 async def start_scheduler():
     SQLModel.metadata.create_all(engine)
-    # asyncio.create_task(scheduler.start_loop())
+    asyncio.create_task(scheduler.start_loop())
 
 
 

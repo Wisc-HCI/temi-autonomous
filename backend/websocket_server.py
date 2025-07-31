@@ -273,7 +273,6 @@ class WebSocketServer:
                 await self.send_message(PATH_TEMI, msg)
             else:
                 print('asr_result: No response from user.')
-        
         elif msg_json['type'] == 'saved_locations':
             locations = msg_json.get("data", [])
             print(f"Received locations: {locations}")
