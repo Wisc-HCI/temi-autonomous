@@ -1,19 +1,24 @@
 import os
 import shutil
 import time
+import json
+import uuid
+import datetime
 
 import asyncio
 from fastapi import (
     FastAPI, WebSocket, WebSocketDisconnect,
     Request, UploadFile, File, Form
 )
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import SQLModel, create_engine, Session
 from typing import Annotated
-
+from pydantic import BaseModel
+from redis import asyncio as aioredis
 
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
 from scheduler import TemiScheduler
@@ -29,6 +34,7 @@ load_dotenv()
 
 sqlite_file_name = "robot_family.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
+redis_client = aioredis.from_url("redis://localhost", decode_responses=True)
 
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
@@ -71,7 +77,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 @app.on_event("startup")
 async def start_scheduler():
     SQLModel.metadata.create_all(engine)
-    asyncio.create_task(scheduler.start_loop())
+    # asyncio.create_task(scheduler.start_loop())
 
 
 
@@ -100,6 +106,80 @@ def get_status():
         }
     }
 
+
+@app.get("/new_message_count")
+async def new_message_count():
+    since_day = datetime.datetime.now().date()
+    count = 0
+    async for key in redis_client.scan_iter("message:*"):
+        raw = await redis_client.get(key)
+        if raw:
+            try:
+                msg = json.loads(raw)
+                msg_ts = float(msg.get("timestamp", 0))
+                msg_day = datetime.datetime.fromtimestamp(msg_ts).date()
+
+                if msg_day == since_day:
+                    count += 1
+            except Exception:
+                continue
+    return {"count": count}
+
+
+@app.get("/message_board")
+async def list_messages():
+    messages = []
+    async for key in redis_client.scan_iter("message:*"):
+        raw = await redis_client.get(key)
+        if raw:
+            try:
+                message = json.loads(raw)
+                messages.append(message)
+            except json.JSONDecodeError:
+                continue  # Skip malformed messages
+
+    # Optionally sort by timestamp if needed
+    messages.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    return messages
+
+
+'''
+# Message 1
+redis-cli SET message:5 '{"user": "Alice", "message": "Hi there! Hi there! Hi there! Hi there! Hi there! Hi there! Hi there! Hi there!", "timestamp": "2025-07-31T15:45:00"}'
+
+# Message 2
+redis-cli  SET message:6 '{"user": "Bob", "message": "Hey Alice!", "timestamp": "2025-07-31T15:46:00"}'
+
+# Message 3
+redis-cli  SET message:7 '{"user": "Charlie", "message": "How’s everyone?", "timestamp": "2025-07-31T15:47:30"}'
+
+# Message 
+redis-cli SET message:8 '{"user": "Dana", "message": "Let’s meet at 4.", "timestamp": "2025-07-31T15:48:10"}'
+'''
+
+class ChatMessage(BaseModel):
+    user: str
+    message: str
+
+
+@app.post("/message_board")
+async def post_message(msg: ChatMessage):
+    print("Received message:", msg)
+
+    key = f"message:{uuid.uuid4().hex}"
+    data = {
+        "user": msg.user,
+        "message": msg.message,
+        "timestamp": time.time(),
+        "display": datetime.datetime.now().strftime("%m/%d %I:%M%p"),
+    }
+    await redis_client.set(key, json.dumps(data))
+    return {"status": "ok", "id": key}
+
+
+@app.get("/users")
+async def list_users():
+    return list(scheduler.family_members)
 
 
 @app.post("/members/")

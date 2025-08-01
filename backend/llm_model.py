@@ -141,6 +141,18 @@ class LLMAgent:
     #         print(f'[ERROR] Parsing response to JSON: {e.msg} — at pos {e.pos}')
     #         return None
 
+
+    async def respond_to_check_in(self, user_name):
+        '''
+        User presses their name on the screen as a check-in
+
+        side-effects:
+        For reminders provided, remember to
+            - increment the count, set to inactive if necessary
+            - update last triggered time
+        '''
+        pass
+
     async def generate_response(self, user_message):
         state_info = await self.get_state_info()
         locations_info = await get_locations_info()

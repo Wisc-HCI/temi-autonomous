@@ -2,6 +2,7 @@ import asyncio
 from functools import partial
 import datetime
 from dotenv import load_dotenv
+import random
 import redis
 from redis import asyncio as aioredis
 
@@ -25,26 +26,29 @@ family_config_file = os.environ.get('FAMILY_CONFIG_PATH')
 
 '''
 TODO:
-Turn ON/OFF privacy mode as needed
-
 
 Check-in for morning routines
+    - state info about tasks, current reminders, etc.
+    - respond_to_check_in in LLM
 
-Snapshots while interacting with user --> into state?
-    - Inject relevant states into LLM prompt
+Message Board??
+    - some UI for message counts today
+
+Android UI: Better Icons
+Privacy mode on/off through the settings popup.
+
+
+Snapshots while interacting with user
+    - Inject relevant states into LLM prompt?
 
 LOG images (analysis etc.)
 
-Message Board??
-
-TEST image deletion and camera on/off over long period of time
+TEST camera on/off over long period of time
 
 Make these into services
 
 Lots of other logs -- and uploading them to Box
-
-
-
+    - exposing all status to redis, using those for logs and reports
 '''
 
 
@@ -86,8 +90,10 @@ class TemiScheduler:
         self.privacy_mode = None
         self.last_battery_check = 0
         self.battery_percent = 200
+        self.is_charging = None
         self.start_of_day = None
         self.end_of_day = None
+        self.family_members = []
 
         self._refresh_config_from_file()
 
@@ -125,6 +131,9 @@ class TemiScheduler:
                     last_end = end_time
             self.start_of_day = datetime.datetime.combine(now.date(), first_start)
             self.end_of_day = datetime.datetime.combine(now.date(), last_end)
+            self.family_members = self.family_config_json['family_members'].keys()
+            # redis_client.sadd("users", *family_members)
+
         except Exception as e:
             print(f"Error loading family config from file: {e}")
             self.family_config_json = {}
@@ -307,7 +316,8 @@ class TemiScheduler:
         
         elif data['type'] == 'battery_status':
             print(f'battery_status: {data["data"]}')
-            self.battery_percent = int(data['data'])
+            self.battery_percent = int(data['data']['percent'])
+            self.is_charging = data['data']['is_charging']
             self.last_battery_check = time.time()
 
         elif data['type'] == 'asr_result':
@@ -350,6 +360,9 @@ class TemiScheduler:
                 "command": "cameraControl",
                 "payload": "off"
             })
+            # clear all pending requests
+            self.pending_requests = {}
+
     
     async def _toggle_privacy(self, value):
         if self.websocket:
@@ -372,7 +385,12 @@ class TemiScheduler:
             await redis_client.rpush(f'inactive_tasks:{current_date}', task)
         # Actually trigger robot action
         print(f'Triggering robot action for {task}')
-        speech = self.family_config_json[current_date].get(task, {}).get('trigger_speech', "")
+        speeches = self.family_config_json[current_date].get(task, {}).get('trigger_speech', [])
+        try:
+            speech = speeches[new_value-1]
+        except Exception as e:
+            print('Not enough speeches specified.')
+            speech = random.choice(speeches)
         if self.websocket and speech:
             await self.websocket.send_json({
                 "command": "speak",
@@ -395,6 +413,10 @@ class TemiScheduler:
                 "home base"
             )
             return _next
+    
+        elif self.battery_percent < 40 and self.is_charging:
+            print('Robot is still charging. Let it rest.')
+            return None
 
         if self.privacy_mode:
             print('Robot is in privacy mode.')
@@ -459,7 +481,7 @@ class TemiScheduler:
             #             print('At home base and latet context timestamp is less than 20 minutes. Staying Put.')
             #             return None
             if len(self.movement_plan) == 0:
-                if self.battery_percent < 50:
+                if self.battery_percent < 20:
                     _next = partial(
                         self.goToLocation,
                         "home base"
