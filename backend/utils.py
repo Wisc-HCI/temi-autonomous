@@ -17,6 +17,8 @@ redis_client = aioredis.from_url("redis://localhost", decode_responses=True)
 LOG_DIR = os.environ.get('LOG_DIR')
 LOG_FILE = os.path.join(LOG_DIR, "log.log")
 CONVO_LOG = os.path.join(LOG_DIR, "conversation.log")
+KEY_LOG_FILE = os.path.join(LOG_DIR, "log_key.log")
+IMAGE_LOG_FILE = os.path.join(LOG_DIR, "log_images.log")
 
 
 # @lru_cache(maxsize=1)
@@ -63,13 +65,27 @@ def log_event(direction: str, path: str, data: str):
         f.write(f"[{timestamp}][{direction}][{path}] {data}\n")
 
 
+def log_key_event(event, data):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(KEY_LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}][{event}] {data}\n")
+
+
+def log_image_analysis(image_name, result_json):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    result_Str = json.dumps(result_json)
+    with open(IMAGE_LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}][{image_name}];{result_Str}\n")
+
+
+
 async def save_message(speaker_role, message):
-    # for now keep 80 messages in redis
+    # for now keep 100 messages in redis
     now = datetime.datetime.now()
     now_str = now.strftime('%b %d %Y, %A, %I:%M%p')
     msg_format = f'{speaker_role}: [{now_str}] {message}'
     await redis_client.rpush('current-msgs', msg_format)
-    await redis_client.ltrim('current-msgs', -80, -1)
+    await redis_client.ltrim('current-msgs', -100, -1)
     if CONVO_LOG:
         with open(CONVO_LOG, "a") as f:
             f.write(msg_format + '\n')

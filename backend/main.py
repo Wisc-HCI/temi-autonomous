@@ -22,7 +22,7 @@ from redis import asyncio as aioredis
 
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
 from scheduler import TemiScheduler
-from utils import log_event
+from utils import log_event, log_key_event
 from models import FamilyMember, ScheduledTask, TaskFlow, TaskItem, Chore
 
 
@@ -77,7 +77,8 @@ SessionDep = Annotated[Session, Depends(get_session)]
 @app.on_event("startup")
 async def start_scheduler():
     SQLModel.metadata.create_all(engine)
-    # asyncio.create_task(scheduler.start_loop())
+    if os.environ.get("LOOP_ON") == "ON":
+        asyncio.create_task(scheduler.start_loop())
 
 
 
@@ -140,22 +141,9 @@ async def list_messages():
 
     # Optionally sort by timestamp if needed
     messages.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    log_key_event('message-board', 'checked')
     return messages
 
-
-'''
-# Message 1
-redis-cli SET message:5 '{"user": "Alice", "message": "Hi there! Hi there! Hi there! Hi there! Hi there! Hi there! Hi there! Hi there!", "timestamp": "2025-07-31T15:45:00"}'
-
-# Message 2
-redis-cli  SET message:6 '{"user": "Bob", "message": "Hey Alice!", "timestamp": "2025-07-31T15:46:00"}'
-
-# Message 3
-redis-cli  SET message:7 '{"user": "Charlie", "message": "How’s everyone?", "timestamp": "2025-07-31T15:47:30"}'
-
-# Message 
-redis-cli SET message:8 '{"user": "Dana", "message": "Let’s meet at 4.", "timestamp": "2025-07-31T15:48:10"}'
-'''
 
 class ChatMessage(BaseModel):
     user: str
@@ -164,8 +152,6 @@ class ChatMessage(BaseModel):
 
 @app.post("/message_board")
 async def post_message(msg: ChatMessage):
-    print("Received message:", msg)
-
     key = f"message:{uuid.uuid4().hex}"
     data = {
         "user": msg.user,
@@ -174,6 +160,7 @@ async def post_message(msg: ChatMessage):
         "display": datetime.datetime.now().strftime("%m/%d %I:%M%p"),
     }
     await redis_client.set(key, json.dumps(data))
+    log_key_event('message-board', f'posted new message: {msg.message}')
     return {"status": "ok", "id": key}
 
 

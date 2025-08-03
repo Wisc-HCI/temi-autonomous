@@ -10,6 +10,7 @@ import mimetypes
 import signal
 from dotenv import load_dotenv
 from ultralytics import YOLO
+from utils import log_image_analysis, log_key_event
 
 load_dotenv()
 
@@ -159,7 +160,7 @@ def check_image_for_reminders(filename, reminder_context):
         max_completion_tokens=256,
         stop="\n\n\n",
         messages=messages,
-        temperature=0.2,
+        temperature=0.1,
         top_p=1,
         n=1,
         response_format={"type": "json_object"},
@@ -168,7 +169,6 @@ def check_image_for_reminders(filename, reminder_context):
     print('check_image_for_reminders', time.time() - start)
 
     res = ans.choices[0].message.content
-    token_output = ans.usage.completion_tokens
     res = parse_json_response(res)
     print(f'[check_image_for_reminders] Analysis result: \n{res}')
     return res
@@ -202,16 +202,22 @@ def process_image(job):
     #     "location": request_context['location']
     # }
 
+    result_json = {
+        'job': job
+    }
+
     now = datetime.datetime.now()
     current_date = now.strftime('%Y/%m/%d')
     task_names = job['task_names']
     all_tasks = family_config_json.get(current_date, {})
+    family_descriptions = family_config_json.get('family_members', {})
     location = job['location']
 
     # check if any people in the picture
     has_person = check_image_for_persons(
         job['filename'],
     )
+    result_json['has_person'] = has_person
 
     for task in task_names:
         redis_client.set(f"last_checked:{task}:{location}", str(int(time.time())))
@@ -221,13 +227,19 @@ def process_image(job):
         for task in task_names:
             vision_trigger = all_tasks.get(task, {}).get('vision_trigger')
             if vision_trigger:
+                # replace user description placeholders
+                for name, desc in family_descriptions.items():
+                    vision_trigger = vision_trigger.replace(f'<{name.lower()}-description>', desc)
                 reminder_context += task + ': ' + vision_trigger + ';\n'
         if reminder_context:
             res = check_image_for_reminders(
                 job['filename'],
                 reminder_context
             )
+            result_json['reminders_status'] = res
             if res is None:
+                print('Error analyzing image. Likely invalid format from openai.')
+                log_image_analysis(job['filename'], result_json)
                 return
             
             print(res)
@@ -240,6 +252,8 @@ def process_image(job):
                 trigger_bool = res.get(task, None)
                 duration_trigger = all_tasks.get(task, {}).get('duration_trigger')
                 if trigger_bool:
+                    result_json['has_trigger'] = True
+                    log_key_event('trigger_true', f'{location};{task}')
                     if duration_trigger:
                         # These are for triggers that depend on certain durations of activities
                         redis_client.set(f"{task}:true:location", location)
@@ -251,9 +265,13 @@ def process_image(job):
                         earliest_timestamp = int(earliest_entry[0][1])
                         if now - earliest_timestamp > duration_trigger:
                             print(f'Adding {task} to robot action queue')
+                            result_json['triggered_action'] = True
+                            log_key_event('trigger_action', f'{location};{task}')
                             redis_client.rpush('robot_action', task)
                     else:
                         print(f'Adding {task} to robot action queue')
+                        log_key_event('trigger_action', f'{location};{task}')
+                        result_json['triggered_action'] = True
                         redis_client.rpush('robot_action', task)
                 else:
                     if duration_trigger:
@@ -281,7 +299,7 @@ def process_image(job):
             # print('Saving result')
             # print(res)
             # redis_client.set(f"location:{location}", json.dumps(res))
-        
+    log_image_analysis(job['filename'], result_json)
     redis_client.set('status', 'idle')
     redis_client.set('status_updated', int(time.time()))
 

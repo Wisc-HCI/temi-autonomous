@@ -6,6 +6,9 @@ sqlmodel
 redis[hiredis]
 requests
 
+# prod serving
+gunicorn "uvicorn[standard]"
+
 # yolo
 ultralytics
 openvino

@@ -81,7 +81,7 @@ class WebSocketServer:
             while True:
                 message = await websocket.receive_text()
                 print(message[:100])
-                log_event('received', ws_path, message[:100])
+                log_event('received', ws_path, message[:200])
                 if message == '':
                     pass
                 if ws_path == PATH_TEMI:
@@ -103,7 +103,7 @@ class WebSocketServer:
     async def send_message(self, group, message):
         # we really just expect one to be in the set
         print(f'Sending message to {group}: {str(message)[:100]}')
-        log_event('sent', group, str(message)[:100])
+        log_event('sent', group, str(message)[:200])
         for connection in self.connections[group]:
             await connection.send_json(message)
             # try:

@@ -1,0 +1,17 @@
+# /etc/systemd/system/image-processor.service
+
+
+[Unit]
+Description=Temi Image Processor Script
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/temi-autonomous/backend
+ExecStart=/usr/bin/python3 /home/pi/temi-autonomous/backend/image_processor.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

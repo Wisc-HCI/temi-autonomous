@@ -1,40 +1,77 @@
 {
-    "2025/07/29": {
-        "time-limits": {
-            "inactive": false,
-            "start": "16:30pm",
-            "end": "21pm",
-            "vision_trigger": "The boy is playing ipad",
-            "who": ["Peixuan"],
-            "where": ["bed", "kitchen"],
-            "duration_trigger": 600,
-            "overall_max_count": "5",
-            "max_count_by_person": {
-                "Peixuan": 5
+    "2025/07/31": {
+        "gorcery-bags": {
+            "start": "00:40",
+            "end": "23:59",
+            "vision_trigger": "Some grocery bags or a cart in the doorway, and it looks like they need to be put away.",
+            "trigger_action": {
+                "find": "anyone",
+                "where": ["c desk"],
+                "say": [
+                    "Do you want to help put the shopping bags away?"
+                ]
             },
-            "trigger_check_freq": 120,
+            "who": "Michael",
+            "where": ["mx desk"],
+            "max_trigger_count": 3,
+            "duration_trigger": 300,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
         },
-        "task 1": {
-            "start": "",
-            "end": "",
-            "vision_trigger": "",
-            "who": [],
-            "where": [],
+        "time-limits": {
+            "start": "00:40",
+            "end": "23:59",
+            "vision_trigger": "<michael-description> is working on his computer",
+             "trigger_action": {
+                "say": [
+                    "How long have you been working on your computer? Remember to take a break!",
+                    "How long have you been working on your computer? Remember to take a break!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["mx desk", "c desk"],
+            "max_trigger_count": 3,
+            "duration_trigger": 300,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
+        },
+        "entering-leaving-room": {
+            "start": "00:40",
+            "end": "23:59",
+            "vision_trigger": "Any person walking up or down the stairs",
+            "trigger_action": {
+                "say": [
+                    "Are you leaving? Do you want to leave a message?"
+                ]
+            },
+            "who": "Michael",
+            "where": ["stair"],
+            "max_trigger_count": 10,
             "duration_trigger": null,
-            "overall_max_count": "",
-            "max_count_by_person": {
-
+            "trigger_check_freq": 15,
+            "trigger_freq": 300
+        },
+        "remind-check-calendar": {
+            "start": "00:40",
+            "end": "23:59",
+            "vision_trigger": "A male adult is in the image",
+            "trigger_action": {
+                "say": [
+                    "Hi Michael! Don't forget to check your calendar!"
+                ]
             },
-            "status_by_person": {
-
-            },
-            "trigger_check_freq": ""
+            "who": "Michael",
+            "where": ["mx desk"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 120,
+            "trigger_freq": 300
         }
     },
     "family_members": {
-        "member1": "",
-        "member2": "",
-        "member3": ""
+        "David": "11 year-old Son",
+        "Katie": "Mother",
+        "Michael": "The father, a 33 year old asian male adult with shorthair."
     },
     "movement_plan": [
         {

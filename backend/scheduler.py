@@ -12,7 +12,8 @@ import uuid
 import os
 import traceback
 
-from utils import get_locations_info
+from utils import (
+    get_locations_info, log_key_event, save_message)
 
 
 load_dotenv()
@@ -26,29 +27,27 @@ family_config_file = os.environ.get('FAMILY_CONFIG_PATH')
 
 '''
 TODO:
+Trigger action:
+    - FIND someone, then say something
+    - ALmost done, and to TEST
 
+==========
 Check-in for morning routines
     - state info about tasks, current reminders, etc.
     - respond_to_check_in in LLM
+Inject LLM state with context and reminders relevant info.
+==========
 
-Message Board??
-    - some UI for message counts today
+TEST Privacy mode on/off through the settings popup.
+    - For X minutes
+    - For rest of the day
 
-Android UI: Better Icons
-Privacy mode on/off through the settings popup.
+    
 
-
-Snapshots while interacting with user
-    - Inject relevant states into LLM prompt?
-
-LOG images (analysis etc.)
-
+TEST LOG images (analysis etc.)
 TEST camera on/off over long period of time
-
-Make these into services
-
-Lots of other logs -- and uploading them to Box
-    - exposing all status to redis, using those for logs and reports
+Lots of other logs
+    - TEST exposing all status to redis, using those for logs and reports
 '''
 
 
@@ -94,6 +93,9 @@ class TemiScheduler:
         self.start_of_day = None
         self.end_of_day = None
         self.family_members = []
+        self.pause_snapshots_until = 0
+        self.last_interaction_snapshot = 0
+        self.turn_privacy_off_at = None
 
         self._refresh_config_from_file()
 
@@ -198,6 +200,9 @@ class TemiScheduler:
 
     async def request_snapshot(self, task_names, location=None, position=None):
         print('[scheduler] request_snapshot')
+        if time.time() < self.pause_snapshots_until:
+            print('[scheduler] Skipping request_snapshot since paused.')
+            return None
         if self.websocket and self.privacy_mode is False:
             await self._set_status(f"capturing:{location}")
             request_id = str(uuid.uuid4())
@@ -245,6 +250,7 @@ class TemiScheduler:
                     "command": "goTo",
                     "payload": location
                 })
+                log_key_event('going-to', location)
 
     async def handle_api_event(self, message):
         print("scheduler: handle_api_event")
@@ -258,9 +264,11 @@ class TemiScheduler:
                 request_context = self.pending_requests[request_id]
                 if request_context['task_names'] == ['user-interaction']:
                     # no analysis needed for this, just save a ref to the last three of these
-                    await redis_client.rpush("user-interaction-images", message['filename'])
-                    await redis_client.ltrim("user-interaction-images", -3, -1)
-                    await redis_client.expire("user-interaction-images", 60)
+                    # TODO: save ref to the log file
+                    pass
+                    # await redis_client.rpush("user-interaction-images", message['filename'])
+                    # await redis_client.ltrim("user-interaction-images", -3, -1)
+                    # await redis_client.expire("user-interaction-images", 60)
                     # TODO: do something with these
                 else:
                     # otherwise, enqueue for analysis
@@ -291,12 +299,13 @@ class TemiScheduler:
             print('handled data')
 
         elif data["type"] == "goto_status":
-            # TODO: implement on robot side
             self.goto_status = data['data']
             self.goto_status['timestamp'] = time.time()
             location = self.goto_status['location']
             if self.goto_status['status'] == 'complete':
                 print(f'Arrived at {location}')
+                log_key_event('arrived-at', location)
+                await redis_client.set('current_location', location)
                 self.arrived_at_location = time.time()
                 self.current_location = location
                 if location != 'home base':
@@ -311,14 +320,18 @@ class TemiScheduler:
 
         elif data['type'] == 'privacy_mode_changed':
             print(f'privacy_mode_changed to: {data["data"]}')
-            self.privacy_mode = bool(data['data'])
             self.privacy_mode_updated = time.time()
+            if self.privacy_mode != bool(data['data']):
+                self.privacy_mode = bool(data['data'])
+                log_key_event('privacy_mode_change', data['data'])
         
         elif data['type'] == 'battery_status':
             print(f'battery_status: {data["data"]}')
             self.battery_percent = int(data['data']['percent'])
             self.is_charging = data['data']['is_charging']
             self.last_battery_check = time.time()
+            log_key_event('battery_percent', data['data']['percent'])
+            await redis_client.set('battery_percent', data['data']['percent'])
 
         elif data['type'] == 'asr_result':
             if data['data'] != '<no response detected>':
@@ -326,7 +339,11 @@ class TemiScheduler:
         
         elif data['type'] == 'bewithme_changed':
             self.last_user_interaction = time.time()
+            self.current_location = 'follow-user'
+            await redis_client.set('current_location', location)
 
+        elif data['type'] == 'turn_privacy_off_after':
+            self.turn_privacy_off_at = time.time() + int(data['data']) * 60
 
     async def _get_last_context_timestamp(self):
         locations_info = await get_locations_info()
@@ -362,6 +379,8 @@ class TemiScheduler:
             })
             # clear all pending requests
             self.pending_requests = {}
+            # pause pictures for 30 secs
+            self.pause_snapshots_until = time.time() + 30
 
     
     async def _toggle_privacy(self, value):
@@ -373,30 +392,80 @@ class TemiScheduler:
             now = datetime.datetime.now()
             current_date = now.strftime('%Y/%m/%d')
             await redis_client.set(f'privacy_{value}:{current_date}', 1)
+            if value == 'off':
+                self.turn_privacy_off_at = None
 
-    async def _perform_triggerred_action(self, task):
+    async def _increment_trigger_count(self, task, max_trigger_count):
         now = datetime.datetime.now()
         current_date = now.strftime('%Y/%m/%d')
         key = f'{task}:count:{current_date}'
         new_value = await redis_client.incr(key)
         await redis_client.set(f'last_triggered:{task}', str(int(time.time())))
-        if new_value >= self.family_config_json[current_date].get(task, {}).get('max_trigger_count', 0):
+        if new_value >= max_trigger_count:
             print(f'Adding task {task} to inactive list.')
             await redis_client.rpush(f'inactive_tasks:{current_date}', task)
+        return new_value
+
+    async def _perform_triggerred_action(self, task):
+        is_secondary_task = False
+        if task == 'secondary-task':
+            is_secondary_task = True
+            task = self.secondary_task['original_task']
+            self.secondary_task = None
+        now = datetime.datetime.now()
+        current_date = now.strftime('%Y/%m/%d')
+        max_trigger_count = self.family_config_json[current_date].get(task, {}).get('max_trigger_count', 0)
         # Actually trigger robot action
         print(f'Triggering robot action for {task}')
-        speeches = self.family_config_json[current_date].get(task, {}).get('trigger_speech', [])
-        try:
-            speech = speeches[new_value-1]
-        except Exception as e:
-            print('Not enough speeches specified.')
-            speech = random.choice(speeches)
-        if self.websocket and speech:
-            await self.websocket.send_json({
-                "command": "speak",
-                "payload": speech
-            })
-        self.last_system_speech = time.time()
+        action = self.family_config_json[current_date].get(task, {}).get('trigger_action', {})
+        speeches = action['say']
+        # if secondary: just say it
+        if 'find' not in action or is_secondary_task:
+            new_value = await self._increment_trigger_count(task, max_trigger_count)
+            try:
+                speech = speeches[(new_value - 1) % len(speeches)]
+            except Exception as e:
+                print('Not enough speeches specified.')
+                speech = random.choice(speeches)
+            if self.websocket and speech:
+                await self.websocket.send_json({
+                    "command": "speak",
+                    "payload": speech
+                })
+                save_message('assistant', speech)
+            self.last_system_speech = time.time()
+            log_key_event('performed_action', f'{task} ({new_value}/{max_trigger_count})')
+            await redis_client.set(
+                'last_trigger_task',
+                f'[{now.strftime("%Y-%m-%d %H:%M:%S")}] [{task}] ({new_value}/{max_trigger_count})'
+            )
+        else:
+            # find someone / something first
+            # For now we will just keep one (in theory there could be multiple such tasks)
+            who = action['find']
+            where = action['where']
+            print(f'{task} requires: Find {who} at {where}')
+            if who == 'anyone':
+                vision_trigger = '<anyone>'
+            else:
+                vision_trigger = 'Either of these persons is present: '
+                for name in who.split(';'):
+                    vision_trigger += f'<{name.lower()}-description>, '
+            current_time = datetime.datetime.now().strftime("%H:%M")
+            end_time = current_time + datetime.timedelta(minutes=10)
+            self.secondary_task = {
+                "original_task": task,
+                "start": current_time,
+                "end": end_time,
+                "vision_trigger": vision_trigger,
+                "where": where,
+                "max_trigger_count": 999,
+                "duration_trigger": None,
+                "trigger_check_freq": 10,
+                "trigger_freq": 0
+            }
+            # TODO: Make use of the secondary task in _generate_plan
+            #   - image_processor: use <anyone> to skip LLM call
         # Make sure same trigger/task at other locations are skipped, too
         await self._generate_plan()
 
@@ -430,11 +499,15 @@ class TemiScheduler:
         # user interactions
         if time.time() - self.last_user_interaction < 60 * 3:
             print('User interaction in progress.')
-            # stay put, but capture snapshot
-            _next = partial(
-                self.request_snapshot,
-                ['user-interaction']
-            )
+            # stay put, but maybe capture snapshot
+            _next = None
+            if time.time() - self.last_interaction_snapshot > 10:
+                # TODO: Test this
+                _next = partial(
+                    self.request_snapshot,
+                    ['user-interaction']
+                )
+                self.last_interaction_snapshot = time.time()
             return _next
 
         # see if robot should announce anything first
@@ -466,7 +539,6 @@ class TemiScheduler:
             )
             return _next
 
-        # TODO: listen to all user interactions, and do a check for that timestamp
         status = await self._get_status()
         status_updated = await self._get_status_updated()
         if status == 'idle':
@@ -520,27 +592,29 @@ class TemiScheduler:
         if now - self.privacy_mode_updated > 60 * 15:
             await self._fetch_privacy_status()
             #  also handle auto-toggle on/off in here
-            now = datetime.datetime.now()
-            if now.hour > 1:
-                current_date = now.strftime('%Y/%m/%d')
+            dt_now = datetime.datetime.now()
+            if dt_now.hour > 1:
+                current_date = dt_now.strftime('%Y/%m/%d')
                 privacy_off_toggled = await redis_client.get(f'privacy_off:{current_date}')
                 privacy_on_toggled = await redis_client.get(f'privacy_on:{current_date}')
                 if not privacy_off_toggled and self.start_of_day:
-                    if self.start_of_day - now <= datetime.timedelta(minutes=20):
+                    if self.start_of_day - dt_now <= datetime.timedelta(minutes=20):
                         # start trying to toggle privacy to off to start the day
                         print('Trying to toggle privacy OFF to start the day')
                         await self._toggle_privacy('off')
                 if not privacy_on_toggled and self.end_of_day:
-                    if now - self.end_of_day > datetime.timedelta(minutes=10):
+                    if dt_now - self.end_of_day > datetime.timedelta(minutes=10):
                         # start trying to toggle privacy to ON to end the day
                         print('Trying to toggle privacy ON to end the day')
-                        await self._toggle_privacy('on')                       
+                        await self._toggle_privacy('on')     
+
+        if self.turn_privacy_off_at and now > self.turn_privacy_off_at:
+            await self._toggle_privacy('off')
 
         if len(self.pending_requests) > 5:
             # something wrong with camera, let's restart it
             await self._turn_camera_off()
 
-        # TODO: check redis results
         if self.websocket:
             _next = await self.get_next_action()
             if _next:
