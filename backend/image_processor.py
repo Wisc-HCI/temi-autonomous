@@ -219,65 +219,94 @@ def process_image(job):
     )
     result_json['has_person'] = has_person
 
+    has_secondary_task = False
     for task in task_names:
         redis_client.set(f"last_checked:{task}:{location}", str(int(time.time())))
+        if task == 'secondary-task':
+            has_secondary_task = True
 
-    if has_person:
+    if has_secondary_task:
+        secondary_task = redis_client.get('secondary_task')
+        if secondary_task:
+            secondary_task = json.loads(secondary_task)
+            all_tasks['secondary-task'] = secondary_task
+
+    check_no_person = False
+    for task in task_names:
+        vision_trigger = all_tasks.get(task, {}).get('vision_trigger', '')
+        print(f'Task {task}: {vision_trigger}')
+        if (
+            '-description>' not in vision_trigger and
+            'person' not in vision_trigger and
+            'anyone' not in vision_trigger
+        ):
+            check_no_person = True
+            break
+
+    res_has_people = {}
+    res_context = {}
+    if has_person or check_no_person:
         reminder_context = ''
         for task in task_names:
             vision_trigger = all_tasks.get(task, {}).get('vision_trigger')
             if vision_trigger:
+                if vision_trigger == '<anyone>':
+                    res_has_people[task] = True
+                    continue
                 # replace user description placeholders
                 for name, desc in family_descriptions.items():
                     vision_trigger = vision_trigger.replace(f'<{name.lower()}-description>', desc)
                 reminder_context += task + ': ' + vision_trigger + ';\n'
         if reminder_context:
-            res = check_image_for_reminders(
+            res_context = check_image_for_reminders(
                 job['filename'],
                 reminder_context
             )
-            result_json['reminders_status'] = res
-            if res is None:
+            result_json['reminders_status'] = res_context
+            if res_context is None:
                 print('Error analyzing image. Likely invalid format from openai.')
-                log_image_analysis(job['filename'], result_json)
-                return
+                res_context = {}
             
-            print(res)
+        print(res_has_people)
+        print(res_context)
+        res = res_context | res_has_people
+        print(res)
 
-            # TODO: store task-specific results, and depending on class of reminder
-            # may need to save "first_true" / "last_true" etc.
-            now = int(time.time())
-            now_str = str(now)
-            for task in task_names:
-                trigger_bool = res.get(task, None)
-                duration_trigger = all_tasks.get(task, {}).get('duration_trigger')
-                if trigger_bool:
-                    result_json['has_trigger'] = True
-                    log_key_event('trigger_true', f'{location};{task}')
-                    if duration_trigger:
-                        # These are for triggers that depend on certain durations of activities
-                        redis_client.set(f"{task}:true:location", location)
-                        ZSET_KEY = f"{task}:true"
-                        redis_client.zadd(ZSET_KEY, {now_str: now})
-                        cutoff = now - 15 * 60
-                        redis_client.zremrangebyscore(ZSET_KEY, 0, cutoff)
-                        earliest_entry = redis_client.zrange(ZSET_KEY, 0, 0, withscores=True)
-                        earliest_timestamp = int(earliest_entry[0][1])
-                        if now - earliest_timestamp > duration_trigger:
-                            print(f'Adding {task} to robot action queue')
-                            result_json['triggered_action'] = True
-                            log_key_event('trigger_action', f'{location};{task}')
-                            redis_client.rpush('robot_action', task)
-                    else:
+        now = int(time.time())
+        now_str = str(now)
+        for task in task_names:
+            trigger_bool = res.get(task, None)
+            print(f'task: {task}; trigger_bool: {trigger_bool}')
+            duration_trigger = all_tasks.get(task, {}).get('duration_trigger')
+            if trigger_bool is True:
+                result_json['has_trigger'] = True
+                log_key_event('trigger_true', f'{location};{task}')
+                if duration_trigger:
+                    # These are for triggers that depend on certain durations of activities
+                    redis_client.set(f"{task}:true:location", location)
+                    ZSET_KEY = f"{task}:true"
+                    redis_client.zadd(ZSET_KEY, {now_str: now})
+                    cutoff = now - 15 * 60
+                    redis_client.zremrangebyscore(ZSET_KEY, 0, cutoff)
+                    earliest_entry = redis_client.zrange(ZSET_KEY, 0, 0, withscores=True)
+                    earliest_timestamp = int(earliest_entry[0][1])
+                    if now - earliest_timestamp > duration_trigger:
                         print(f'Adding {task} to robot action queue')
-                        log_key_event('trigger_action', f'{location};{task}')
-                        result_json['triggered_action'] = True
+                        result_json['intention_for_action'] = True
+                        log_key_event('intention_for_action', f'{location};{task}')
                         redis_client.rpush('robot_action', task)
                 else:
-                    if duration_trigger:
-                        prev_location = redis_client.get(f"{task}:true:location")
-                        if prev_location == location:
-                            redis_client.delete(f"{task}:true:location")
+                    print(f'Adding {task} to robot action queue')
+                    log_key_event('intention_for_action', f'{location};{task}')
+                    result_json['intention_for_action'] = True
+                    redis_client.rpush('robot_action', task)
+            elif trigger_bool is False:
+                if duration_trigger:
+                    prev_location = redis_client.get(f"{task}:true:location")
+                    if prev_location == location:
+                        redis_client.delete(f"{task}:true:location")
+            else:
+                print(f"{task} not in result.")
 
     else:
         for task in task_names:

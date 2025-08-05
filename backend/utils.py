@@ -121,22 +121,22 @@ async def check_weather():
     return weather_str
 
 
-async def get_locations_info():
-    pattern = "location:*"
-    keys = [key async for key in redis_client.scan_iter(match=pattern)]
+# async def get_locations_info():
+#     pattern = "location:*"
+#     keys = [key async for key in redis_client.scan_iter(match=pattern)]
     
-    if not keys:
-        return []
+#     if not keys:
+#         return []
 
-    json_strings = await redis_client.mget(*keys)
+#     json_strings = await redis_client.mget(*keys)
 
-    results = []
-    for key, js in zip(keys, json_strings):
-        if js:
-            try:
-                parsed = json.loads(js)
-                parsed["location"] = key
-                results.append(parsed)
-            except json.JSONDecodeError:
-                print(f"Could not parse JSON for key: {key}")
-    return results
+#     results = []
+#     for key, js in zip(keys, json_strings):
+#         if js:
+#             try:
+#                 parsed = json.loads(js)
+#                 parsed["location"] = key
+#                 results.append(parsed)
+#             except json.JSONDecodeError:
+#                 print(f"Could not parse JSON for key: {key}")
+#     return results

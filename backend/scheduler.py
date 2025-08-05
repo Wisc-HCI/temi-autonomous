@@ -13,7 +13,9 @@ import os
 import traceback
 
 from utils import (
-    get_locations_info, log_key_event, save_message)
+    log_key_event, save_message,
+    log_image_analysis
+)
 
 
 load_dotenv()
@@ -27,9 +29,6 @@ family_config_file = os.environ.get('FAMILY_CONFIG_PATH')
 
 '''
 TODO:
-Trigger action:
-    - FIND someone, then say something
-    - ALmost done, and to TEST
 
 ==========
 Check-in for morning routines
@@ -38,16 +37,13 @@ Check-in for morning routines
 Inject LLM state with context and reminders relevant info.
 ==========
 
-TEST Privacy mode on/off through the settings popup.
-    - For X minutes
-    - For rest of the day
+==========
+Parent trigger a routine/reminder?
+==========
 
-    
-
-TEST LOG images (analysis etc.)
 TEST camera on/off over long period of time
-Lots of other logs
-    - TEST exposing all status to redis, using those for logs and reports
+
+
 '''
 
 
@@ -62,8 +58,6 @@ class TemiScheduler:
     Controls the robot's behavior when it's not actively interacting with users.
     """
     def __init__(self, websocket):
-        # (on-route:)waypoint name, "user" if following user
-        # TODO: need listener for robot movement status (e.g. "arrived at")
         self.location = ""
         self.goto_status = {}
         self.websocket = websocket
@@ -72,7 +66,6 @@ class TemiScheduler:
         self.family_config_json = {}
         self.family_config_db = {}
         self.identified_chores = []
-        # TODO: perhaps dynamic movement plan based on time
         self.movement_plan = []
         # self.user_actions = 
         self.next_waypoint_index = 0
@@ -96,7 +89,10 @@ class TemiScheduler:
         self.pause_snapshots_until = 0
         self.last_interaction_snapshot = 0
         self.turn_privacy_off_at = None
-
+        self.secondary_task = None
+        self.current_date_str = datetime.datetime.now().strftime('%Y/%m/%d')
+        self.prev_sent_manual_tasks = []
+        self.active_manual_triggers = {}
         self._refresh_config_from_file()
 
     async def _get_status(self):
@@ -114,13 +110,13 @@ class TemiScheduler:
         """
         These are more static, set by researchers
         """
+        now = datetime.datetime.now()
+        current_date = now.strftime('%Y/%m/%d')
+        self.current_date_str = current_date
         try:
             with open(family_config_file, 'r') as f:
                 self.family_config_json = json.load(f)
             self.refresh_time_file = time.time()
-            # self.movement_plan = self.family_config_json.get("movement_plan", [])
-            now = datetime.datetime.now()
-            current_date = now.strftime('%Y/%m/%d')
             tasks = self.family_config_json.get(current_date, {})
             first_start = datetime.datetime.strptime("23:59", "%H:%M").time()
             last_end = datetime.datetime.strptime("00:01", "%H:%M").time()
@@ -139,7 +135,27 @@ class TemiScheduler:
         except Exception as e:
             print(f"Error loading family config from file: {e}")
             self.family_config_json = {}
-            # self.movement_plan = []
+
+
+    def get_active_manual_triggers(self):
+        # return {'name': {'task': 'reminder content', ...}, ...}
+        res = {}
+        for task in self.active_tasks:
+            task_info = self.family_config_json[self.current_date_str].get(task)
+            if not task_info:
+                continue
+            if task_info.get('allow_manual_trigger') is True:
+                name = task_info.get('who')
+                if name:
+                    if name in res:
+                        res[name].append(task)
+                    else:
+                        res[name] = [task]
+
+        self.active_manual_triggers = res
+        print('manual trigger active tasks:')
+        print(res)
+        return res
 
 
     def _refresh_config_from_db(self):
@@ -156,16 +172,20 @@ class TemiScheduler:
             self.family_config_db = {}
 
     async def _generate_plan(self):
-        self.active_tasks = []
+        active_tasks = []
         location_tasks = {}
         now = datetime.datetime.now()
-        current_date = now.strftime('%Y/%m/%d')
-        tasks = self.family_config_json.get(current_date, {})
+        tasks = self.family_config_json.get(self.current_date_str, {})
+        skip_task = None
+        if self.secondary_task:
+            tasks['secondary-task'] = self.secondary_task
+            skip_task = self.secondary_task['original_task']
+
         # get tasks for current date
-        inactive_tasks = await redis_client.lrange(f'inactive_tasks:{current_date}', 0, -1)
+        inactive_tasks = await redis_client.lrange(f'inactive_tasks:{self.current_date_str}', 0, -1)
         print('inactive_tasks: ', inactive_tasks)
         for name, task in tasks.items():
-            if name in inactive_tasks:
+            if name in inactive_tasks or name == skip_task:
                 continue
             # Parse time strings into time objects
             start_time = datetime.datetime.strptime(task['start'], "%H:%M").time()
@@ -173,7 +193,7 @@ class TemiScheduler:
             now_time = now.time()
             if now_time > start_time and now_time < end_time:
                 print(f"Task {name} is active!")
-                self.active_tasks.append(name)
+                active_tasks.append(name)
                 last_triggered = await redis_client.get(f"last_triggered:{name}")
                 if last_triggered and time.time() - int(last_triggered) < task['trigger_freq']:
                     continue
@@ -193,6 +213,13 @@ class TemiScheduler:
                         location_tasks[location].append(name)
                     else:
                         location_tasks[location] = [name]
+            elif now_time > end_time:
+                if name == 'secondary-task':
+                    print('Secondary task expiring. Removed.')
+                    self.secondary_task = None
+                    await redis_client.delete('secondary_task')
+
+        self.active_tasks = active_tasks        
         self.location_tasks = location_tasks
         self.movement_plan = list(self.location_tasks.keys())
         self.next_waypoint_index = 0
@@ -264,8 +291,7 @@ class TemiScheduler:
                 request_context = self.pending_requests[request_id]
                 if request_context['task_names'] == ['user-interaction']:
                     # no analysis needed for this, just save a ref to the last three of these
-                    # TODO: save ref to the log file
-                    pass
+                    log_image_analysis(message['filename'], request_context)
                     # await redis_client.rpush("user-interaction-images", message['filename'])
                     # await redis_client.ltrim("user-interaction-images", -3, -1)
                     # await redis_client.expire("user-interaction-images", 60)
@@ -345,14 +371,16 @@ class TemiScheduler:
         elif data['type'] == 'turn_privacy_off_after':
             self.turn_privacy_off_at = time.time() + int(data['data']) * 60
 
-    async def _get_last_context_timestamp(self):
-        locations_info = await get_locations_info()
-        latest_timestamp = 0
-        for loc_item in locations_info:
-            if loc_item['timestamp'] > latest_timestamp:
-                latest_timestamp = loc_item['timestamp']
-        return latest_timestamp
-    
+        elif data['type'] == 'manual_task_trigger':
+            self.last_user_interaction = time.time()
+            print('manual_task_trigger for: ')
+            print(data['data'])
+            tasks = self.active_manual_triggers.get(data['data'], [])
+            for task in tasks:
+                print(f'triggering: {task}')
+                log_key_event('intention_for_action', f'manual;{task}')
+                await redis_client.rpush('robot_action', task)
+
     async def _fetch_privacy_status(self):
         if self.websocket:
             await self.websocket.send_json({
@@ -373,6 +401,7 @@ class TemiScheduler:
 
     async def _turn_camera_off(self):
         if self.websocket:
+            print('_turn_camera_off triggered.')
             await self.websocket.send_json({
                 "command": "cameraControl",
                 "payload": "off"
@@ -380,8 +409,7 @@ class TemiScheduler:
             # clear all pending requests
             self.pending_requests = {}
             # pause pictures for 30 secs
-            self.pause_snapshots_until = time.time() + 30
-
+            self.pause_snapshots_until = time.time() + 90
     
     async def _toggle_privacy(self, value):
         if self.websocket:
@@ -389,21 +417,29 @@ class TemiScheduler:
                 "command": "privacyToggle",
                 "payload": value
             })
-            now = datetime.datetime.now()
-            current_date = now.strftime('%Y/%m/%d')
-            await redis_client.set(f'privacy_{value}:{current_date}', 1)
+            await redis_client.set(f'privacy_{value}:{self.current_date_str}', 1)
             if value == 'off':
                 self.turn_privacy_off_at = None
+    
+    async def _update_manual_active_tasks_UI(self):
+        if self.websocket:
+            new_keys = list(self.get_active_manual_triggers().keys())
+            print(self.prev_sent_manual_tasks)
+            print(new_keys)
+            if set(self.prev_sent_manual_tasks) != set(new_keys):
+                await self.websocket.send_json({
+                    "command": "manualTaskUpdate",
+                    "payload": json.dumps(new_keys)
+                })
+                self.prev_sent_manual_tasks = new_keys
 
     async def _increment_trigger_count(self, task, max_trigger_count):
-        now = datetime.datetime.now()
-        current_date = now.strftime('%Y/%m/%d')
-        key = f'{task}:count:{current_date}'
+        key = f'{task}:count:{self.current_date_str}'
         new_value = await redis_client.incr(key)
         await redis_client.set(f'last_triggered:{task}', str(int(time.time())))
         if new_value >= max_trigger_count:
             print(f'Adding task {task} to inactive list.')
-            await redis_client.rpush(f'inactive_tasks:{current_date}', task)
+            await redis_client.rpush(f'inactive_tasks:{self.current_date_str}', task)
         return new_value
 
     async def _perform_triggerred_action(self, task):
@@ -413,11 +449,10 @@ class TemiScheduler:
             task = self.secondary_task['original_task']
             self.secondary_task = None
         now = datetime.datetime.now()
-        current_date = now.strftime('%Y/%m/%d')
-        max_trigger_count = self.family_config_json[current_date].get(task, {}).get('max_trigger_count', 0)
+        max_trigger_count = self.family_config_json[self.current_date_str].get(task, {}).get('max_trigger_count', 0)
         # Actually trigger robot action
         print(f'Triggering robot action for {task}')
-        action = self.family_config_json[current_date].get(task, {}).get('trigger_action', {})
+        action = self.family_config_json[self.current_date_str].get(task, {}).get('trigger_action', {})
         speeches = action['say']
         # if secondary: just say it
         if 'find' not in action or is_secondary_task:
@@ -432,13 +467,14 @@ class TemiScheduler:
                     "command": "speak",
                     "payload": speech
                 })
-                save_message('assistant', speech)
-            self.last_system_speech = time.time()
-            log_key_event('performed_action', f'{task} ({new_value}/{max_trigger_count})')
-            await redis_client.set(
-                'last_trigger_task',
-                f'[{now.strftime("%Y-%m-%d %H:%M:%S")}] [{task}] ({new_value}/{max_trigger_count})'
-            )
+                await save_message('assistant', speech)
+                self.last_system_speech = time.time()
+                log_key_event('performed_action', f'{task} ({new_value}/{max_trigger_count})')
+                await redis_client.set(
+                    'last_trigger_task',
+                    f'[{now.strftime("%Y-%m-%d %H:%M:%S")}] [{task}] ({new_value}/{max_trigger_count})'
+                )
+                await asyncio.sleep(10)
         else:
             # find someone / something first
             # For now we will just keep one (in theory there could be multiple such tasks)
@@ -451,12 +487,12 @@ class TemiScheduler:
                 vision_trigger = 'Either of these persons is present: '
                 for name in who.split(';'):
                     vision_trigger += f'<{name.lower()}-description>, '
-            current_time = datetime.datetime.now().strftime("%H:%M")
+            current_time = datetime.datetime.now()
             end_time = current_time + datetime.timedelta(minutes=10)
             self.secondary_task = {
                 "original_task": task,
-                "start": current_time,
-                "end": end_time,
+                "start": current_time.strftime("%H:%M"),
+                "end": end_time.strftime("%H:%M"),
                 "vision_trigger": vision_trigger,
                 "where": where,
                 "max_trigger_count": 999,
@@ -464,10 +500,11 @@ class TemiScheduler:
                 "trigger_check_freq": 10,
                 "trigger_freq": 0
             }
-            # TODO: Make use of the secondary task in _generate_plan
-            #   - image_processor: use <anyone> to skip LLM call
+            await redis_client.set('secondary_task', json.dumps(self.secondary_task))
+            log_key_event('triggered_secondary_action', f'{task}: (triggering secondary task to find {who})')
         # Make sure same trigger/task at other locations are skipped, too
         await self._generate_plan()
+        await self._update_manual_active_tasks_UI()
 
     async def get_next_action(self):
         """
@@ -483,10 +520,16 @@ class TemiScheduler:
             )
             return _next
     
-        elif self.battery_percent < 40 and self.is_charging:
+        # see if robot should announce anything first
+        tasks_with_actions = await redis_client.lrange('robot_action', 0, -1)
+        for task in tasks_with_actions:
+            await self._perform_triggerred_action(task)
+        await redis_client.delete('robot_action')
+    
+        if self.battery_percent < 20 and self.is_charging:
             print('Robot is still charging. Let it rest.')
             return None
-
+        
         if self.privacy_mode:
             print('Robot is in privacy mode.')
             # for now just stay where it is
@@ -496,52 +539,46 @@ class TemiScheduler:
             # )
             return None
         
-        # user interactions
-        if time.time() - self.last_user_interaction < 60 * 3:
-            print('User interaction in progress.')
-            # stay put, but maybe capture snapshot
-            _next = None
-            if time.time() - self.last_interaction_snapshot > 10:
-                # TODO: Test this
-                _next = partial(
-                    self.request_snapshot,
-                    ['user-interaction']
-                )
-                self.last_interaction_snapshot = time.time()
-            return _next
-
-        # see if robot should announce anything first
-        tasks_with_actions = await redis_client.lrange('robot_action', 0, -1)
-        # if len(tasks_with_actions) > 0:
-        #     await self._stop_robot()
-        for task in tasks_with_actions:
-            await self._perform_triggerred_action(task)
-        await redis_client.delete('robot_action')
-
         if time.time() - self.last_system_speech < 60:
             return None
 
-        # check if we have a movement plan / if we need a new one
-        if len(self.movement_plan) == 0:
-            if time.time() - self.movement_plan_updated_at > 30:
-                await self._generate_plan()
-        elif self.next_waypoint_index >= len(self.movement_plan):
-            await self._generate_plan()
-
-        print('Finished generating plans...')
-
-        # stay at home base if nothing of interest
-        if len(self.active_tasks) == 0:
-            print('No active tasks. Returning to home base.')
-            _next = partial(
-                self.goToLocation,
-                "home base"
-            )
-            return _next
-
         status = await self._get_status()
         status_updated = await self._get_status_updated()
+
         if status == 'idle':
+
+            # check if we have a movement plan / if we need a new one
+            if len(self.movement_plan) == 0:
+                if time.time() - self.movement_plan_updated_at > 30:
+                    await self._generate_plan()
+            elif self.next_waypoint_index >= len(self.movement_plan):
+                await self._generate_plan()
+
+            print('Finished generating plans...')
+
+            # stay at home base if nothing of interest
+            if len(self.active_tasks) == 0:
+                print('No active tasks. Returning to home base.')
+                _next = partial(
+                    self.goToLocation,
+                    "home base"
+                )
+                return _next
+
+            # user interactions
+            if time.time() - self.last_user_interaction < 60 * 3:
+                print('User interaction in progress.')
+                # stay put, but maybe capture snapshot
+                _next = None
+                if time.time() - self.last_interaction_snapshot > 20:
+                    # TODO: Test this / but anyway we're not doing this for now
+                    _next = partial(
+                        self.request_snapshot,
+                        ['user-interaction']
+                    )
+                    self.last_interaction_snapshot = time.time()
+                return _next
+
             # if we're (possibly) back at homebase and we have recent context. Rest a bit.
             # TODO: check if Temi has api to check if we're on homebase
             print(f"next_waypoint_index: {self.next_waypoint_index}")
@@ -585,18 +622,20 @@ class TemiScheduler:
         now = time.time()
         if now - self.refresh_time_file > self.refresh_interval_file:
             self._refresh_config_from_file()
+            await self._update_manual_active_tasks_UI()
 
         if now - self.last_battery_check > 60 * 10:
             await self._fetch_battery_status()
 
         if now - self.privacy_mode_updated > 60 * 15:
+            # reset this every once in a while to trigger a potentially redundant update
+            self.prev_sent_manual_tasks = []
             await self._fetch_privacy_status()
             #  also handle auto-toggle on/off in here
             dt_now = datetime.datetime.now()
             if dt_now.hour > 1:
-                current_date = dt_now.strftime('%Y/%m/%d')
-                privacy_off_toggled = await redis_client.get(f'privacy_off:{current_date}')
-                privacy_on_toggled = await redis_client.get(f'privacy_on:{current_date}')
+                privacy_off_toggled = await redis_client.get(f'privacy_off:{self.current_date_str}')
+                privacy_on_toggled = await redis_client.get(f'privacy_on:{self.current_date_str}')
                 if not privacy_off_toggled and self.start_of_day:
                     if self.start_of_day - dt_now <= datetime.timedelta(minutes=20):
                         # start trying to toggle privacy to off to start the day

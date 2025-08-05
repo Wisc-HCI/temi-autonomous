@@ -9,7 +9,7 @@ import redis
 import time
 from redis import asyncio as aioredis
 import random
-from utils import save_message, check_weather, get_locations_info
+from utils import save_message, check_weather
 
 
 load_dotenv()
@@ -23,11 +23,6 @@ redis_client = aioredis.from_url("redis://localhost", decode_responses=True)
 
 OPENAI_GPT_MODEL="gpt-4.1-mini-2025-04-14"
 OPENAI_GPT_MODEL_LG="gpt-4.1-2025-04-14"
-FAMILY_INFO_STR = os.environ.get('FAMILY_INFO_STR')
-
-if not FAMILY_INFO_STR:
-    print('====================')
-    print('FAMILY_INFO_STR is not provided!')
 
 
 MAIN_PROMPT = '''
@@ -36,7 +31,7 @@ You are a friendly, conversational social robot deployed to a family to help fac
 
 The only thing you are able to do is to provide information about the family's routines and tasks, and have general conversations.
 
-For example, you are NOT able to remind them again in X minutes.
+For example, you are NOT able to remind them again in X minutes, mute notifications, or perform any actual functions.
 
 
 
@@ -44,8 +39,11 @@ The family info:
 {FAMILY_INFO}
 
 
-The latest space and environmental information is:
-{ENVIRONMENT_INFO}
+The current active routines and reminders are:
+{ROUTINES_INFO}
+
+You may allude to these if the opportunity arises.
+
 
 
 IF you are asked to tell a joke, a riddle, or anything entertaining, use this *seed topic* to generate the response:
@@ -83,7 +81,7 @@ The transcriptions you are provided with may be from various people within the f
 
 class LLMAgent:
     def __init__(self):
-        pass
+        self.scheduler = None
 
     async def get_current_messages(self):
         # redis_client.expire('current-msgs', MSG_EXPIRE)
@@ -142,27 +140,47 @@ class LLMAgent:
     #         return None
 
 
-    async def respond_to_check_in(self, user_name):
-        '''
-        User presses their name on the screen as a check-in
+    async def get_routine_task_info(self):
+        res = ""
+        manual_tasks = self.scheduler.active_manual_triggers
+        if manual_tasks:
+            now = datetime.datetime.now()
+            current_date = now.strftime('%Y/%m/%d')
+            all_tasks = self.scheduler.family_config_json[current_date]
+            for name, tasks in manual_tasks.items():
+                for task in tasks:
+                    task_info = all_tasks.get(task, {}).get('description', "")
+                    res += f"{name}: {task_info}\n"
+        return res
 
-        side-effects:
-        For reminders provided, remember to
-            - increment the count, set to inactive if necessary
-            - update last triggered time
-        '''
-        pass
+    # async def respond_to_check_in(self, user_name):
+    #     '''
+    #     User presses their name on the screen as a check-in
+
+    #     side-effects:
+    #     For reminders provided, remember to
+    #         - increment the count, set to inactive if necessary
+    #         - update last triggered time
+    #     '''
+    #     pass
 
     async def generate_response(self, user_message):
         state_info = await self.get_state_info()
-        locations_info = await get_locations_info()
-        locations_info_str = ''
-        now = time.time()
-        for loc_item in locations_info:
-            elapsed_minutes = int((now - loc_item['timestamp']) / 60)
-            _item_str = f"{loc_item['location']}: {loc_item['context']}"
-            _item_str += f" (last updated: {elapsed_minutes} minutes ago)\n"
-            locations_info_str += _item_str
+        # locations_info = await get_locations_info()
+        # locations_info_str = ''
+        # now = time.time()
+        # for loc_item in locations_info:
+        #     elapsed_minutes = int((now - loc_item['timestamp']) / 60)
+        #     _item_str = f"{loc_item['location']}: {loc_item['context']}"
+        #     _item_str += f" (last updated: {elapsed_minutes} minutes ago)\n"
+        #     locations_info_str += _item_str
+
+        routines_info = await self.get_routine_task_info()
+
+        FAMILY_INFO_STR = ""
+        if self.scheduler.family_config_json:
+            for name, info in self.scheduler.family_config_json['family_members'].items():
+                FAMILY_INFO_STR += f"{name}: {info}"
 
         msg_sys = {
             'role': 'system',
@@ -201,13 +219,12 @@ class LLMAgent:
         ]
         seed = random.choice(seeds)
 
-        # TODO: routines info?
         prompt = MAIN_PROMPT.format(
             FAMILY_INFO=FAMILY_INFO_STR,
             COMMAND=user_message,
             STATE=state_info,
-            # ROUTINES_INFO="",
-            ENVIRONMENT_INFO=locations_info_str,
+            ROUTINES_INFO=routines_info,
+            # ENVIRONMENT_INFO=locations_info_str,
             SEED=seed
         )
 

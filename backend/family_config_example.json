@@ -1,18 +1,19 @@
 {
-    "2025/07/31": {
-        "gorcery-bags": {
+    "2025/08/03": {
+        "whiteboard": {
             "start": "00:40",
             "end": "23:59",
-            "vision_trigger": "Some grocery bags or a cart in the doorway, and it looks like they need to be put away.",
+            "vision_trigger": "whiteboard has some drawings or text on it.",
+            "conversation_trigger": null,
             "trigger_action": {
-                "find": "anyone",
-                "where": ["c desk"],
+                "find": "michael",
+                "where": ["mx desk"],
                 "say": [
-                    "Do you want to help put the shopping bags away?"
+                    "Do you want to clean the whiteboard?"
                 ]
             },
             "who": "Michael",
-            "where": ["mx desk"],
+            "where": ["whiteboard"],
             "max_trigger_count": 3,
             "duration_trigger": 300,
             "trigger_check_freq": 60,

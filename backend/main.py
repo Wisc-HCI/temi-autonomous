@@ -41,9 +41,8 @@ engine = create_engine(sqlite_url, connect_args=connect_args)
 
 
 app = FastAPI()
-server = WebSocketServer()
 scheduler = TemiScheduler(None)
-server.scheduler = scheduler
+server = WebSocketServer(scheduler)
 UPLOAD_DIR = os.environ.get('UPLOAD_DIR')
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -106,6 +105,11 @@ def get_status():
             k: len(v) for k, v in server.connections.items()
         }
     }
+
+
+@app.get("/manual_active_tasks")
+async def manual_active_tasks():
+    return scheduler.get_active_manual_triggers()
 
 
 @app.get("/new_message_count")

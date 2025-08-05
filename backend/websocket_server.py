@@ -46,7 +46,7 @@ PROACTIVE = 'proactive'
 
 
 class WebSocketServer:
-    def __init__(self):
+    def __init__(self, scheduler=None):
         self.connections = {
             PATH_TEMI: set(),
             PATH_CONTROL: set(),
@@ -58,7 +58,8 @@ class WebSocketServer:
         self.behavior_mode = None
         self.last_displayed = None
         self.messages = self._load_messages()
-        self.scheduler = None
+        self.scheduler = scheduler
+        llm_agent.scheduler = scheduler
 
 
     def _load_messages(self):
@@ -99,6 +100,8 @@ class WebSocketServer:
             if websocket in self.connections[ws_path]:
                 self.connections[ws_path].remove(websocket)
             print(self.connections)
+            if ws_path == PATH_TEMI:
+                self.scheduler.websocket = None
 
     async def send_message(self, group, message):
         # we really just expect one to be in the set

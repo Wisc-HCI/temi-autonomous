@@ -1,6 +1,10 @@
 # These are *additional* changes based on the qual / family-school project's image
 
-# disable internetcheck: /etc/cron.d/internet_check
+# disable
+# internetcheck: /etc/cron.d/internet_check
+# vectorizing: /etc/cron.d/vectorize_conversations
+# box upload: /etc/cron.d/box_upload
+
 
 
 pip install -r /home/pi/temi-autonomous/backend/requirements.txt --break-system-packages
