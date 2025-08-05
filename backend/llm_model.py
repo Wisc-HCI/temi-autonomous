@@ -39,10 +39,8 @@ The family info:
 {FAMILY_INFO}
 
 
-The current active routines and reminders are:
-{ROUTINES_INFO}
 
-You may allude to these if the opportunity arises.
+{ROUTINES_INFO}
 
 
 
@@ -53,11 +51,13 @@ IF you are asked to tell a joke, a riddle, or anything entertaining, use this *s
 **Current State**
 The current state is: {STATE}
 
+
 ** Important **
 NEVER ask follow-up questions.
 If the user asks something, just answer it.
 The only exception is asking for clarifications.
 DO NOT offer anything extra besides the answer.
+
 
 
 The latest USER input is: {COMMAND}.
@@ -82,6 +82,7 @@ The transcriptions you are provided with may be from various people within the f
 class LLMAgent:
     def __init__(self):
         self.scheduler = None
+        self.last_proactive = time.time()
 
     async def get_current_messages(self):
         # redis_client.expire('current-msgs', MSG_EXPIRE)
@@ -141,9 +142,10 @@ class LLMAgent:
 
 
     async def get_routine_task_info(self):
-        res = ""
+        res = "There are currently NO reminders or tasks available.\n\n"
         manual_tasks = self.scheduler.active_manual_triggers
         if manual_tasks:
+            res = "The current active routines and reminders are:\n"
             now = datetime.datetime.now()
             current_date = now.strftime('%Y/%m/%d')
             all_tasks = self.scheduler.family_config_json[current_date]
@@ -151,6 +153,12 @@ class LLMAgent:
                 for task in tasks:
                     task_info = all_tasks.get(task, {}).get('description', "")
                     res += f"{name}: {task_info}\n"
+            # switch between proactive and reactive
+            prompt_version = "ONLY make use of these information **if** you are asked about routines or tasks."
+            if time.time() - self.last_proactive > 10 * 60:
+                prompt_version = "You should also proactively mention these during conversations."
+                self.last_proactive = time.time()
+            res += f"\n{prompt_version}\n\n"
         return res
 
     # async def respond_to_check_in(self, user_name):
@@ -180,7 +188,7 @@ class LLMAgent:
         FAMILY_INFO_STR = ""
         if self.scheduler.family_config_json:
             for name, info in self.scheduler.family_config_json['family_members'].items():
-                FAMILY_INFO_STR += f"{name}: {info}"
+                FAMILY_INFO_STR += f"{name}: {info}\n"
 
         msg_sys = {
             'role': 'system',

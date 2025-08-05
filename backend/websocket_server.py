@@ -18,21 +18,11 @@ ZOOM_JWT = os.environ.get('ZOOM_JWT')
 PATH_TEMI = '/temi'
 PATH_CONTROL = '/control'
 PATH_PARTICIPANT = '/participant'
-LOG_FILE = 'participant_data/log.log'
 MESSAGES_FILE = 'participant_data/messages.json'
 UPLOAD_DIR = "participant_data/media"
 MEDIA_INDEX_FILE = os.path.join(UPLOAD_DIR, "display_list.txt")
 
 llm_agent = LLMAgent()
-
-
-try:
-    with open(MESSAGES_FILE, 'r') as f:
-        MESSAGES = json.load(f)
-except Exception as e:
-    print('[ERROR] No messages file. Set to empty')
-    MESSAGES = []
-
 
 
 '''
@@ -71,8 +61,9 @@ class WebSocketServer:
             return []
 
     def save_messages(self):
-        with open(MESSAGES_FILE, 'w') as f:
-            json.dump(self.messages, f, indent=4)
+        print('not implemented yet: save_messages')
+        # with open(MESSAGES_FILE, 'w') as f:
+        #     json.dump(self.messages, f, indent=4)
 
     async def handle_connection(self, websocket, ws_path):
         self.connections[ws_path].add(websocket)
