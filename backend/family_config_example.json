@@ -1,97 +1,354 @@
 {
-    "2025/08/03": {
-        "whiteboard": {
-            "start": "00:40",
-            "end": "23:59",
-            "vision_trigger": "whiteboard has some drawings or text on it.",
-            "conversation_trigger": null,
-            "trigger_action": {
-                "find": "michael",
-                "where": ["mx desk"],
-                "say": [
-                    "Do you want to clean the whiteboard?"
-                ]
-            },
-            "who": "Michael",
-            "where": ["whiteboard"],
-            "max_trigger_count": 3,
-            "duration_trigger": 300,
-            "trigger_check_freq": 60,
-            "trigger_freq": 600
-        },
-        "time-limits": {
-            "start": "00:40",
-            "end": "23:59",
-            "vision_trigger": "<michael-description> is working on his computer",
-             "trigger_action": {
-                "say": [
-                    "How long have you been working on your computer? Remember to take a break!",
-                    "How long have you been working on your computer? Remember to take a break!"
-                ]
-            },
-            "who": "Michael",
-            "where": ["mx desk", "c desk"],
-            "max_trigger_count": 3,
-            "duration_trigger": 300,
-            "trigger_check_freq": 60,
-            "trigger_freq": 600
-        },
-        "entering-leaving-room": {
-            "start": "00:40",
-            "end": "23:59",
-            "vision_trigger": "Any person walking up or down the stairs",
+     "2025/08/05": {
+        "leaving-home": {
+            "start": "07:00",
+            "end": "10:00",
+            "vision_trigger": "Any person who looks like they are leaving the home.",
             "trigger_action": {
                 "say": [
-                    "Are you leaving? Do you want to leave a message?"
+                    "Are you leaving? Did you remember to bring everything you need?"
                 ]
             },
-            "who": "Michael",
-            "where": ["stair"],
-            "max_trigger_count": 10,
+            "where": ["door"],
+            "max_trigger_count": 3,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 500
+        },
+        "coming-home": {
+            "start": "16:00",
+            "end": "18:00",
+            "vision_trigger": "Any person who looks like they just came in the door and returned home.",
+            "trigger_action": {
+                "find": "anyone",
+                "where": ["kid bed", "kid desk"],
+                "say": [
+                    "It looks like someone just got home. Do you want to go greet them?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 2,
             "duration_trigger": null,
             "trigger_check_freq": 15,
-            "trigger_freq": 300
+            "trigger_freq": 1200
         },
-        "remind-check-calendar": {
-            "start": "00:40",
-            "end": "23:59",
-            "vision_trigger": "A male adult is in the image",
+        "ipad-usage": {
+            "start": "16:30",
+            "end": "21:00",
+            "vision_trigger": "<michael-description> playing on a screen like an ipad.",
             "trigger_action": {
                 "say": [
-                    "Hi Michael! Don't forget to check your calendar!"
+                    "Hey Michael, have you completed your homework yet?",
+                    "Hello Michael, how long have you been playing on your iPad? Do you want to take a break?",
+                    "Hello Michael, do you want to talk to me for a bit instead of playing on the iPad?",
+                    "Hello Michael, how long have you been playing on your iPad? Please be mindful of your time limits!"
                 ]
             },
             "who": "Michael",
-            "where": ["mx desk"],
-            "max_trigger_count": 1,
-            "duration_trigger": null,
+            "where": ["kid bed"],
+            "max_trigger_count": 4,
+            "duration_trigger": 600,
             "trigger_check_freq": 120,
             "trigger_freq": 300
-        }
+        },
+        "read-book": {
+            "start": "18:55",
+            "end": "19:30",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+             "trigger_action": {
+                "say": [
+                    "Hey Michael, have you read for 20 minutes yet today? If not, now is a good time to start!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kitchen", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
+        },
+        "bed-time": {
+            "start": "21:25",
+            "end": "22:10",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you brushed your teeth yet? Now is a good time to start your bedtime routine if you haven't already!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["living room", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 300
+        }        
+    },
+    "2025/08/06": {
+        "leaving-home": {
+            "start": "07:00",
+            "end": "10:00",
+            "vision_trigger": "Any person who looks like they are leaving the home.",
+            "trigger_action": {
+                "say": [
+                    "Are you leaving? Did you remember to bring everything you need?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 3,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 500
+        },
+        "coming-home": {
+            "start": "16:00",
+            "end": "18:00",
+            "vision_trigger": "Any person who looks like they just came in the door and returned home.",
+            "trigger_action": {
+                "find": "anyone",
+                "where": ["kid bed", "kid desk"],
+                "say": [
+                    "It looks like someone just got home. Do you want to go greet them?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 2,
+            "duration_trigger": null,
+            "trigger_check_freq": 15,
+            "trigger_freq": 1200
+        },
+        "ipad-usage": {
+            "start": "16:30",
+            "end": "21:00",
+            "vision_trigger": "<michael-description> playing on a screen like an ipad.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you completed your homework yet?",
+                    "Hello Michael, how long have you been playing on your iPad? Do you want to take a break?",
+                    "Hello Michael, do you want to talk to me for a bit instead of playing on the iPad?",
+                    "Hello Michael, how long have you been playing on your iPad? Please be mindful of your time limits!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kid bed"],
+            "max_trigger_count": 4,
+            "duration_trigger": 600,
+            "trigger_check_freq": 120,
+            "trigger_freq": 300
+        },
+        "read-book": {
+            "start": "18:55",
+            "end": "19:30",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+             "trigger_action": {
+                "say": [
+                    "Hey Michael, have you read for 20 minutes yet today? If not, now is a good time to start!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kitchen", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
+        },
+        "bed-time": {
+            "start": "21:25",
+            "end": "22:10",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you brushed your teeth yet? Now is a good time to start your bedtime routine if you haven't already!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["living room", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 300
+        }        
+    },
+    "2025/08/07": {
+        "leaving-home": {
+            "start": "07:00",
+            "end": "10:00",
+            "vision_trigger": "Any person who looks like they are leaving the home.",
+            "trigger_action": {
+                "say": [
+                    "Are you leaving? Did you remember to bring everything you need?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 3,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 500
+        },
+        "coming-home": {
+            "start": "16:00",
+            "end": "18:00",
+            "vision_trigger": "Any person who looks like they just came in the door and returned home.",
+            "trigger_action": {
+                "find": "anyone",
+                "where": ["kid bed", "kid desk"],
+                "say": [
+                    "It looks like someone just got home. Do you want to go greet them?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 2,
+            "duration_trigger": null,
+            "trigger_check_freq": 15,
+            "trigger_freq": 1200
+        },
+        "ipad-usage": {
+            "start": "16:30",
+            "end": "21:00",
+            "vision_trigger": "<michael-description> playing on a screen like an ipad.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you completed your homework yet?",
+                    "Hello Michael, how long have you been playing on your iPad? Do you want to take a break?",
+                    "Hello Michael, do you want to talk to me for a bit instead of playing on the iPad?",
+                    "Hello Michael, how long have you been playing on your iPad? Please be mindful of your time limits!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kid bed"],
+            "max_trigger_count": 4,
+            "duration_trigger": 600,
+            "trigger_check_freq": 120,
+            "trigger_freq": 300
+        },
+        "read-book": {
+            "start": "18:55",
+            "end": "19:30",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+             "trigger_action": {
+                "say": [
+                    "Hey Michael, have you read for 20 minutes yet today? If not, now is a good time to start!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kitchen", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
+        },
+        "bed-time": {
+            "start": "21:25",
+            "end": "22:10",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you brushed your teeth yet? Now is a good time to start your bedtime routine if you haven't already!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["living room", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 300
+        }        
+    },
+    "2025/08/08": {
+        "leaving-home": {
+            "start": "07:00",
+            "end": "10:00",
+            "vision_trigger": "Any person who looks like they are leaving the home.",
+            "trigger_action": {
+                "say": [
+                    "Are you leaving? Did you remember to bring everything you need?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 3,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 500
+        },
+        "coming-home": {
+            "start": "16:00",
+            "end": "18:00",
+            "vision_trigger": "Any person who looks like they just came in the door and returned home.",
+            "trigger_action": {
+                "find": "anyone",
+                "where": ["kid bed", "kid desk"],
+                "say": [
+                    "It looks like someone just got home. Do you want to go greet them?"
+                ]
+            },
+            "where": ["door"],
+            "max_trigger_count": 2,
+            "duration_trigger": null,
+            "trigger_check_freq": 15,
+            "trigger_freq": 1200
+        },
+        "ipad-usage": {
+            "start": "16:30",
+            "end": "21:00",
+            "vision_trigger": "<michael-description> playing on a screen like an ipad.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you completed your homework yet?",
+                    "Hello Michael, how long have you been playing on your iPad? Do you want to take a break?",
+                    "Hello Michael, do you want to talk to me for a bit instead of playing on the iPad?",
+                    "Hello Michael, how long have you been playing on your iPad? Please be mindful of your time limits!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kid bed"],
+            "max_trigger_count": 4,
+            "duration_trigger": 600,
+            "trigger_check_freq": 120,
+            "trigger_freq": 300
+        },
+        "read-book": {
+            "start": "18:55",
+            "end": "19:30",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+             "trigger_action": {
+                "say": [
+                    "Hey Michael, have you read for 20 minutes yet today? If not, now is a good time to start!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["kitchen", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 60,
+            "trigger_freq": 600
+        },
+        "bed-time": {
+            "start": "21:25",
+            "end": "22:10",
+            "allow_manual_trigger": true,
+            "vision_trigger": "<michael-description> is present.",
+            "trigger_action": {
+                "say": [
+                    "Hey Michael, have you brushed your teeth yet? Now is a good time to start your bedtime routine if you haven't already!"
+                ]
+            },
+            "who": "Michael",
+            "where": ["living room", "kid bed"],
+            "max_trigger_count": 1,
+            "duration_trigger": null,
+            "trigger_check_freq": 30,
+            "trigger_freq": 300
+        }        
     },
     "family_members": {
-        "David": "11 year-old Son",
-        "Katie": "Mother",
-        "Michael": "The father, a 33 year old asian male adult with shorthair."
-    },
-    "movement_plan": [
-        {
-            "name": "mx desk",
-            "start_time": "",
-            "end_time": ""
-        },
-        {
-            "name": "cat litter",
-            "start_time": "",
-            "end_time": ""
-        },
-        {
-            "name": "stair"
-        }
-    ],
-    "location_reminder": {
-        "mx desk": "If the computer is on and no one is sitting there, the computer should be turned off.",
-        "cat litter": "If the cat litter box looks used, it should be cleaned.",
-        "stair": "If the lights are still on, they should be turned off."
+        "Michael": "11 year-old asian boy with shorthair",
+        "Shelly": "38 year-old asian female"
     }
 }
