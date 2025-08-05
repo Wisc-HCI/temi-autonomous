@@ -366,7 +366,7 @@ class TemiScheduler:
         elif data['type'] == 'bewithme_changed':
             self.last_user_interaction = time.time()
             self.current_location = 'follow-user'
-            await redis_client.set('current_location', location)
+            await redis_client.set('current_location', 'follow-user')
 
         elif data['type'] == 'turn_privacy_off_after':
             self.turn_privacy_off_at = time.time() + int(data['data']) * 60

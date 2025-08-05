@@ -365,7 +365,7 @@ const WizardPage = () => {
             </div>
 
 
-            <div className="mb-2 mt-4">
+      {/*      <div className="mb-2 mt-4">
               <h4>Screenshot</h4>
               <select
                 className="form-select"
@@ -400,13 +400,13 @@ const WizardPage = () => {
                   })
                 }}>
               {screenshotData ? "Refresh" : "Fetch"}
-            </button>
+            </button>*/}
 
           </div>
 
           <div className="col-md-8">
 
-            <div className="row">
+{/*            <div className="row">
 
               <div className="col-md-7">
                 <h4>Behavioral Modes</h4>
@@ -461,7 +461,7 @@ const WizardPage = () => {
                 }
               </div>
             </div>
-
+*/}
 
 
             <h4 className="mt-2">Go To ...</h4>
@@ -581,7 +581,7 @@ const WizardPage = () => {
 
 
             <h4 className="mt-2">Screen</h4>
-            <div className="row mt-2">
+{/*            <div className="row mt-2">
               <div className="col-sm-6">
                 <button
                     disabled={!canActivateCamera}
@@ -593,7 +593,6 @@ const WizardPage = () => {
                       })
                       setCanActivateCamera(false);
                     }}>
-                    {/*behaviorMode === 'proactive' ? "Activate Camera" : "Display Camera"*/}
                     Activate Camera
                 </button>
               </div>
@@ -608,7 +607,7 @@ const WizardPage = () => {
                 </button>
               </div>
               
-            </div>
+            </div>*/}
 
             <div className="row mt-2">
               <div className="col-sm-4">
@@ -687,7 +686,7 @@ const WizardPage = () => {
                   Hide Buttons
                 </button>
               </div>
-              <div className="col-sm-4">
+{/*              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -696,7 +695,7 @@ const WizardPage = () => {
                     })}>
                   Enable Capture Btn
                 </button>
-              </div>
+              </div>*/}
             </div>
 
             <h4 className="mt-2">Robot Admin</h4>
