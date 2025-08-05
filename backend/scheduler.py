@@ -602,6 +602,7 @@ class TemiScheduler:
                     self.goToLocation,
                     self.movement_plan[self.next_waypoint_index]
                 )
+                print(f'Going to: {self.movement_plan[self.next_waypoint_index]}')
                 # TODO: Add retries, maybe
                 self.next_waypoint_index += 1
 
