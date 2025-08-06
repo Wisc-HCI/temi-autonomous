@@ -222,6 +222,7 @@ class TemiScheduler:
         self.active_tasks = active_tasks        
         self.location_tasks = location_tasks
         self.movement_plan = list(self.location_tasks.keys())
+        random.shuffle(self.movement_plan)
         self.next_waypoint_index = 0
         self.movement_plan_updated_at = time.time()
 
