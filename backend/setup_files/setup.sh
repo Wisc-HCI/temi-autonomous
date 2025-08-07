@@ -5,6 +5,14 @@
 # vectorizing: /etc/cron.d/vectorize_conversations
 # box upload: /etc/cron.d/box_upload
 
+# endable:
+# Slack: /etc/cron.d/report
+
+# ufw status
+sudo ufw allow 22/tcp
+sudo ufw allow 8000/tcp
+sudo ufw enable
+
 
 
 pip install -r /home/pi/temi-autonomous/backend/requirements.txt --break-system-packages

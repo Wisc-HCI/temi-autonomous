@@ -513,8 +513,11 @@ class TemiScheduler:
         """
         _next = None
         print('getting next action')
+        status = await self._get_status()
+        status_updated = await self._get_status_updated()
 
-        if self.battery_percent < 10:
+        if self.battery_percent < 15 and status == 'idle':
+            print('Low battery - going back to charge.')
             _next = partial(
                 self.goToLocation,
                 "home base"
@@ -527,7 +530,7 @@ class TemiScheduler:
             await self._perform_triggerred_action(task)
         await redis_client.delete('robot_action')
     
-        if self.battery_percent < 20 and self.is_charging:
+        if self.battery_percent < 25 and self.is_charging:
             print('Robot is still charging. Let it rest.')
             return None
         
@@ -542,9 +545,6 @@ class TemiScheduler:
         
         if time.time() - self.last_system_speech < 60:
             return None
-
-        status = await self._get_status()
-        status_updated = await self._get_status_updated()
 
         if status == 'idle':
 
@@ -591,7 +591,7 @@ class TemiScheduler:
             #             print('At home base and latet context timestamp is less than 20 minutes. Staying Put.')
             #             return None
             if len(self.movement_plan) == 0:
-                if self.battery_percent < 20:
+                if self.battery_percent < 25:
                     _next = partial(
                         self.goToLocation,
                         "home base"
