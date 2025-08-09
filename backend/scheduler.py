@@ -93,6 +93,7 @@ class TemiScheduler:
         self.current_date_str = datetime.datetime.now().strftime('%Y/%m/%d')
         self.prev_sent_manual_tasks = []
         self.active_manual_triggers = {}
+        self.last_sent_manual_tasks = 0
         self._refresh_config_from_file()
 
     async def _get_status(self):
@@ -427,12 +428,14 @@ class TemiScheduler:
             new_keys = list(self.get_active_manual_triggers().keys())
             print(self.prev_sent_manual_tasks)
             print(new_keys)
-            if set(self.prev_sent_manual_tasks) != set(new_keys):
+            if (set(self.prev_sent_manual_tasks) != set(new_keys) or
+                    time.time() - self.last_sent_manual_tasks > 60 * 60):
                 await self.websocket.send_json({
                     "command": "manualTaskUpdate",
                     "payload": json.dumps(new_keys)
                 })
                 self.prev_sent_manual_tasks = new_keys
+                self.last_sent_manual_tasks = time.time()
 
     async def _increment_trigger_count(self, task, max_trigger_count):
         key = f'{task}:count:{self.current_date_str}'
