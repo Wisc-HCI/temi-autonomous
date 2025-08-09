@@ -235,10 +235,12 @@ def process_image(job):
     for task in task_names:
         vision_trigger = all_tasks.get(task, {}).get('vision_trigger', '')
         print(f'Task {task}: {vision_trigger}')
+        word_check = vision_trigger.lower()
         if (
-            '-description>' not in vision_trigger and
-            'person' not in vision_trigger and
-            'anyone' not in vision_trigger
+            '-description>' not in word_check and
+            'person' not in word_check and
+            'anyone' not in word_check and
+            'people' not in word_check
         ):
             check_no_person = True
             break

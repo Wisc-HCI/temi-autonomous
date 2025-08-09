@@ -23,6 +23,7 @@ SAVE_DIR="/home/$USERNAME/saved_logs/$TIMESTAMP-$DIRNAME"
 sudo mv /home/$USERNAME/participant_data $SAVE_DIR
 mkdir -p $SAVE_DIR/syslogs/
 sudo cp /var/log/syslog* $SAVE_DIR/syslogs/
+sudo chown $USERNAME:$USERNAME -R $SAVE_DIR/syslogs/
 
 
 # Set things up again
