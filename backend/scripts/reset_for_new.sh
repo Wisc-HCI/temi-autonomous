@@ -25,6 +25,16 @@ mkdir -p $SAVE_DIR/syslogs/
 sudo cp /var/log/syslog* $SAVE_DIR/syslogs/
 sudo chown $USERNAME:$USERNAME -R $SAVE_DIR/syslogs/
 
+# dump all redis states into a file
+mkdir -p "$SAVE_DIR/redis"
+sudo redis-cli --rdb "$SAVE_DIR/redis/dump.rdb"
+sudo chown $USERNAME:$USERNAME "$SAVE_DIR/redis/dump.rdb"
+
+sudo redis-cli --scan | while read key; do
+    echo "$key => $(sudo redis-cli GET "$key")"
+done > "$SAVE_DIR/redis/dump.txt"
+sudo chown $USERNAME:$USERNAME "$SAVE_DIR/redis/dump.txt"
+
 
 # Set things up again
 sudo mkdir /home/$USERNAME/participant_data

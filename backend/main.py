@@ -134,6 +134,7 @@ async def new_message_count():
 @app.get("/message_board")
 async def list_messages():
     messages = []
+    scheduler.last_user_interaction = time.time()
     async for key in redis_client.scan_iter("message:*"):
         raw = await redis_client.get(key)
         if raw:
@@ -164,12 +165,14 @@ async def post_message(msg: ChatMessage):
         "display": datetime.datetime.now().strftime("%m/%d %I:%M%p"),
     }
     await redis_client.set(key, json.dumps(data))
+    scheduler.last_user_interaction = time.time()
     log_key_event('message-board', f'posted new message: {msg.message}')
     return {"status": "ok", "id": key}
 
 
 @app.get("/users")
 async def list_users():
+    scheduler.last_user_interaction = time.time()
     return list(scheduler.family_members)
 
 
