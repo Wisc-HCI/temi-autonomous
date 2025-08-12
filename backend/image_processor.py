@@ -260,6 +260,8 @@ def process_image(job):
                     vision_trigger = vision_trigger.replace(f'<{name.lower()}-description>', desc)
                 reminder_context += task + ': ' + vision_trigger + ';\n'
         if reminder_context:
+            print('Analyzing images with remidner context:')
+            print(reminder_context)
             res_context = check_image_for_reminders(
                 job['filename'],
                 reminder_context
