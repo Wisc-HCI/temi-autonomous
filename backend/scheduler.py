@@ -675,6 +675,6 @@ class TemiScheduler:
                 print(f"[Scheduler Error] {e}")
                 traceback.print_exc()
             print('scheduling next action')
-            await asyncio.sleep(10)
+            await asyncio.sleep(7)
         
         
