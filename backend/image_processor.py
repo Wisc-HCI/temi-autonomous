@@ -156,7 +156,7 @@ def check_image_for_reminders(filename, reminder_context):
     start = time.time()
     messages = [msg_last]
     ans = gpt_client.chat.completions.create(
-        model=OPENAI_GPT_MODEL,
+        model=OPENAI_GPT_MODEL_LG,
         max_completion_tokens=256,
         stop="\n\n\n",
         messages=messages,
